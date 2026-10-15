@@ -1,0 +1,38 @@
+:root {
+  --text: #1a1a1a;
+  --bg: #fff;
+  --accent: #aa3bff;
+
+  font: 18px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #eee;
+    --bg: #111;
+    --accent: #c084fc;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 48px 16px;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+li + li {
+  margin-top: 8px;
+}
+
+a {
+  color: var(--accent);
+}
