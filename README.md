@@ -36,17 +36,14 @@ Then open **http://localhost:5173/Creative-Coding/**. Include `/Creative-Coding/
 Creative-Coding/
 ├── index.html              Home page: lists every sketch automatically
 ├── folder/                 One subfolder per sketch
-│   ├── animation-hfcc/     p5.js photo-melt animation
-│   │   ├── index.html
-│   │   └── sketch.js
-│   └── sketch-01/          Plain canvas example
+│   └── animation-cross-fade-melt-effect/   p5.js photo-melt animation
 │       ├── index.html
-│       └── main.js
+│       └── sketch.js
 ├── src/
 │   ├── main.js             Home page script
 │   ├── style.css           Home page styles
 │   └── assets/             Images and other files, one subfolder per sketch
-│       └── animation-hfcc/
+│       └── animation-cross-fade-melt-effect/
 ├── public/                 Files copied to the site as-is (e.g. favicon)
 ├── vite.config.js          Vite setup: base path + automatic sketch discovery
 └── .github/workflows/
