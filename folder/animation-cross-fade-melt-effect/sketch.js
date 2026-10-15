@@ -1,8 +1,8 @@
 import p5 from 'p5';
-import photo1 from '/src/assets/animation-hfcc/photo-1.webp';
-import photo2 from '/src/assets/animation-hfcc/photo-2.webp';
-import photo3 from '/src/assets/animation-hfcc/photo-3.webp';
-import photo4 from '/src/assets/animation-hfcc/photo-4.webp';
+import photo1 from '/src/assets/animation-cross-fade-melt-effect/photo-1.webp';
+import photo2 from '/src/assets/animation-cross-fade-melt-effect/photo-2.webp';
+import photo3 from '/src/assets/animation-cross-fade-melt-effect/photo-3.webp';
+import photo4 from '/src/assets/animation-cross-fade-melt-effect/photo-4.webp';
 
 const FILES = [photo1, photo2, photo3, photo4];
 
