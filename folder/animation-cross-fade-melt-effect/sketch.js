@@ -1,45 +1,93 @@
 import p5 from 'p5';
+import { loadSettings, EASES, MELT_DIRECTIONS } from './settings.js';
+import { createLibrary } from './photos.js';
+import { createControls } from './controls.js';
 import photo1 from '/src/assets/animation-cross-fade-melt-effect/photo-1.webp';
 import photo2 from '/src/assets/animation-cross-fade-melt-effect/photo-2.webp';
 import photo3 from '/src/assets/animation-cross-fade-melt-effect/photo-3.webp';
 import photo4 from '/src/assets/animation-cross-fade-melt-effect/photo-4.webp';
 
+// The default photos. Photos added in the panel join these, or replace them.
 const FILES = [photo1, photo2, photo3, photo4];
 
-const STEP = 4;
-// const STEP = 12;
-const CHANGE = 4;
+// All the values you can change live from the panel (see settings.js)
+const settings = loadSettings();
 
-let photos = [];
+let library;
+let controls;
 let seconds = 0;
 
-function preload() {
-  photos = FILES.map((file) => loadImage(file));
+function setup() {
+  const renderer = createCanvas(windowWidth, windowHeight, WEBGL);
+  noStroke();
+  textureWrap(MIRROR);
+  meltShader = createShader(VERTEX, FRAGMENT);
+  turn = makeTurn(0);
+  upcoming = makeTurn(1);
+
+  library = createLibrary(FILES, () => controls?.refresh());
+  controls = createControls(settings, library, () => (photos().length ? turn.index % photos().length : -1));
+  controls.refresh();
+
+  // photos can also be dragged onto the page
+  renderer.drop((file) => {
+    if (file.type === 'image') library.add([file.file]);
+  });
 }
 
-function setup() {
-  createCanvas(windowWidth, windowHeight, WEBGL); 
-  noStroke();
-  textureWrap(MIRROR); 
-  meltShader = createShader(VERTEX, FRAGMENT);
-  photos.forEach((photo) => photo.resize(2560, 0));
-}
+const photos = () => library.photos;
 
 function draw() {
-  seconds = millis() / 1000;
-  const current = floor(seconds / STEP) % photos.length;
-  const next = (current + 1) % photos.length;
+  background(0);   // so photos with see-through parts don't leave trails
+  if (!photos().length) return;   // photos still loading
+  if (!settings.paused) seconds += (deltaTime / 1000) * settings.speed;
 
-  const t = constrain(((seconds % STEP) - (STEP - CHANGE)) / CHANGE, 0, 1);
+  advanceTurns();
+  const count = photos().length;
+  const current = turn.index % count;
+  const next = (current + 1) % count;
 
-  meltEffect(current, next, t);
+  const end = turnEnd(turn);
+  const change = changeOf(turn);
+  const t = constrain((seconds - (end - change)) / change, 0, 1);
+
+  meltEffect(current, next, ease(settings.transitionEase, t));
 
   blurEffect(t);
 }
 
-function photoRect (i) {
-  const photo = photos[i];
-  const view = zoomPanEffect(i);
+//turns: each photo's time on screen, and the random choices made for it
+function makeTurn(index) {
+  return {
+    index,
+    start: 0,
+    before: 0,            // how long the change into this photo took
+    zoomIn: random() < 0.5,
+    origin: random(ORIGINS),
+    direction: random(DIRECTIONS),
+  };
+}
+
+let turn;
+let upcoming;
+
+const stepOf = () => max(settings.step, 0.1);
+const changeOf = () => max(min(settings.change, stepOf()), 0.01);
+const turnEnd = (t) => t.start + stepOf(t);
+
+function advanceTurns() {
+  while (seconds >= turnEnd(turn)) {
+    upcoming.start = turnEnd(turn);
+    upcoming.before = changeOf(turn);
+    upcoming.index = (turn.index % photos().length) + 1;
+    turn = upcoming;
+    upcoming = makeTurn(turn.index + 1);
+  }
+}
+
+function photoRect (i, t, zoomStart, zoomEnd) {
+  const photo = photos()[i].image;
+  const view = zoomPanEffect(t, zoomStart, zoomEnd);
 
   const scale = max(width / photo.width, height / photo.height) * view.zoom;
   const w = photo.width * scale;
@@ -50,9 +98,9 @@ function photoRect (i) {
   return [x, y, w, h];
 }
 
-function ease (t) {
+function ease (name, t) {
   t = constrain(t, 0, 1);
-  return t * t * (3 - 2 * t);
+  return (EASES[name] ?? EASES.linear)(t);
 }
 
 function windowResized() {
@@ -60,18 +108,14 @@ function windowResized() {
 }
 
 //blurring effect
-const BLUR = 1.5;
-
 function blurEffect(t) {
   const blur = sin(t * PI);
 
-  canvas.style.filter = `blur(${blur * BLUR}px)`;
-  canvas.style.transform = `scale(${1 + blur * 0.05})`;
+  canvas.style.filter = `blur(${blur * settings.blur}px)`;
+  canvas.style.transform = `scale(${1 + blur * settings.blurScale})`;
 }
 
 //zooming effect
-const ZOOM_MIN = 1.05;
-const ZOOM_MAX = 1.4;
 
 // where a move can head: x is -1 left, 0 centre, 1 right; y is -1 top, 0 centre, 1 bottom
 const ORIGINS = [
@@ -79,70 +123,56 @@ const ORIGINS = [
   [-1, -1], [1, -1], [-1, 1], [1, 1],
 ];
 
-let plans = [];   // each photo's current move
+// a photo zooms the whole time it is visible: from the start of the change
+// into it until the end of the change out of it
+function zoomPanEffect (t, zoomStart, zoomEnd) {
+  const progress = constrain((seconds - zoomStart) / (zoomEnd - zoomStart), 0, 1);
 
-function zoomPanEffect (i) {
-  const loop = photos.length * STEP;
-  const since = seconds + STEP - i * STEP + loop;
+  const zoomIn = settings.zoomDirection === 'random' ? t.zoomIn : settings.zoomDirection === 'in';
+  const amount = ease(settings.zoomEase, progress);
+  const { zoomMin, zoomMax } = settings;
+  const zoom = zoomIn
+    ? lerp(zoomMin, zoomMax, amount)    // zoom in
+    : lerp(zoomMax, zoomMin, amount);   // zoom out
 
-  const appearance = floor(since / loop); // 1st, 2nd, 3rd time on screen...
-  const progress = constrain(((since % loop) - (STEP - CHANGE)) / (CHANGE + STEP), 0, 1);
-
-  if (!plans[i] || plans[i].appearance !== appearance) {
-    plans[i] = {
-      appearance,
-      zoomIn: random() < 0.5,
-      origin: random(ORIGINS)
-    };
-  }
-  const plan = plans[i];
-
-  let zoom = lerp(ZOOM_MAX, ZOOM_MIN, progress);                // zoom out
-  if (plan.zoomIn) zoom = lerp(ZOOM_MIN, ZOOM_MAX, progress);   // zoom in
-
+  const origin = settings.pan ? t.origin : [0, 0];
   const spareX = (width * (zoom - 1)) / 2;
   const spareY = (height * (zoom - 1)) / 2;
 
   return {
     zoom,
-    x: -plan.origin[0] * spareX,
-    y: -plan.origin[1] * spareY
+    x: -origin[0] * spareX,
+    y: -origin[1] * spareY
   };
 }
 
 //melt effect
-const MELT = 0.3;  
-const WAVE = 1;    
 
-// which way a melt can drip: x is -1 left, 1 right; y is -1 up, 1 down
+// directions a random melt can drip: x is -1 left, 1 right; y is -1 up, 1 down
 const DIRECTIONS = [
   [0, 1], [0, -1], [-1, 0], [1, 0],
   [-1, -1], [1, -1], [-1, 1], [1, 1],
 ];
 
 let meltShader;
-let meltTurn;
-let meltDirection = [0, 1];
 
 function meltEffect (current, next, t) {
-  // new turn: pick a direction. Nothing is melted then, so the change cannot be seen.
-  const turn = floor(seconds / STEP);
-  if (turn !== meltTurn) {
-    meltTurn = turn;
-    const [dx, dy] = random(DIRECTIONS);
-    const length = sqrt(dx * dx + dy * dy);
-    meltDirection = [dx / length, dy / length];
-  }
+  const [dx, dy] = MELT_DIRECTIONS[settings.meltDirection] ?? turn.direction;
+  const length = sqrt(dx * dx + dy * dy);
+
+  const end = turnEnd(turn);
+  const rectA = photoRect(current, turn, turn.start - turn.before, end);
+  const rectB = photoRect(next, upcoming, end - changeOf(turn), end + stepOf(upcoming));
 
   shader(meltShader);
-  meltShader.setUniform('photoA', photos[current]);
-  meltShader.setUniform('photoB', photos[next]);
-  meltShader.setUniform('rectA', photoRect(current));
-  meltShader.setUniform('rectB', photoRect(next));
+  meltShader.setUniform('photoA', photos()[current].image);
+  meltShader.setUniform('photoB', photos()[next].image);
+  meltShader.setUniform('rectA', rectA);
+  meltShader.setUniform('rectB', rectB);
   meltShader.setUniform('size', [width, height]);
-  meltShader.setUniform('melt', MELT);
-  meltShader.setUniform('wave', WAVE);
-  meltShader.setUniform('direction', meltDirection);
+  meltShader.setUniform('melt', settings.melt);
+  meltShader.setUniform('wave', settings.wave);
+  meltShader.setUniform('direction', [dx / length, dy / length]);
   meltShader.setUniform('progress', t);
   rect(0, 0, width, height);
 }
@@ -190,8 +220,8 @@ vec2 melted(vec2 uv, float amount, float time) {
 }
 
 void main() {
-  // eased so the melt starts and ends softly
-  float t = progress * progress * (3.0 - 2.0 * progress);
+  // already eased in sketch.js, with the Ease picked in the panel
+  float t = progress;
 
   // A drips away the whole change. B fades in over most of it, pulled
   // back the other way at first and dripping into place.
@@ -203,5 +233,5 @@ void main() {
 }`;
 
 // A module keeps its functions to itself, so hand them to p5 and start it in global mode
-Object.assign(window, { preload, setup, draw, windowResized });
+Object.assign(window, { setup, draw, windowResized });
 new p5();
