@@ -13,6 +13,10 @@ const sketches = readdirSync(resolve(root, 'folder'), { withFileTypes: true })
 
 export default defineConfig({
   base: '/Creative-Coding/',
+  resolve: {
+    // the Figma effect files import "figma:shaders"; point it at our stand-in
+    alias: { 'figma:shaders': resolve(root, 'src/figma-shaders.js') },
+  },
   define: {
     __SKETCHES__: JSON.stringify(sketches),
   },
