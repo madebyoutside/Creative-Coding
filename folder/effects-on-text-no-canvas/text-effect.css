@@ -1,0 +1,74 @@
+/* 0.2em = 1 unit */
+
+[data-effect] {
+  line-height: 1;
+  transition: opacity 0.2s ease-out;
+}
+
+.is-switching {
+  opacity: 0;
+}
+
+.is-switching .word,
+.is-switching .char {
+  transition: none;
+}
+
+.lines {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.word {
+  display: inline-block;
+  white-space: nowrap;
+  transition: margin-right 0.3s ease-out;
+}
+
+.word:not(:last-child) {
+  margin-right: 0.2em;
+}
+
+.char {
+  display: inline-block;
+  letter-spacing: -0.025em;
+  transition: padding-right 0.3s ease-out;
+}
+
+/* random spacing */
+[data-effect^='random'] .char.gap,
+[data-effect='hover-spread'] .lines:hover .char.gap,
+[data-effect='hover-spread'].text-measure .char.gap {
+  padding-right: 0.2em;
+}
+
+[data-effect^='random'] .word:not(:last-child),
+[data-effect='hover-spread'] .lines:hover .word:not(:last-child),
+[data-effect='hover-spread'].text-measure .word:not(:last-child) {
+  margin-right: 0.6em;
+}
+
+/* random spacing + line height */
+[data-effect='random-layout'] .new-line {
+  margin-left: calc(var(--indent) * 0.2em);
+  margin-top: calc((var(--line-height) - 1) * 1em);
+}
+
+/* hover a letter */
+[data-effect='hover-gap'] .char:not(:last-child):hover {
+  padding-right: 0.2em;
+}
+
+/* hidden clone used by breakLines() */
+.text-measure {
+  position: absolute;
+  visibility: hidden;
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word,
+  .char {
+    transition: none;
+  }
+}

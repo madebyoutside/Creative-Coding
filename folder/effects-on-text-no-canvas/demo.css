@@ -1,0 +1,40 @@
+@font-face {
+  font-family: 'Brut Grotesque';
+  src: url('/src/assets/fonts/Brut_Grotesque-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #e8e8e8;
+}
+
+body, input, select, button {
+  font-family: 'Brut Grotesque', sans-serif;
+}
+
+.headline {
+  margin: 0;
+  padding: 0.5em;
+  font-size: clamp(48px, 21.714px + 8.214vw, 140px);
+  font-weight: 500;
+  color: #000;
+}
+
+.controls {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.text-input {
+  flex: 1 1 240px;
+  height: 24px;
+}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Text Effects 3</title>
+  <link rel="stylesheet" href="./text-effect.css">
+  <link rel="stylesheet" href="./demo.css">
+</head>
+<body>
+  <h1 class="headline">If we lose our power what leverage do we have left?</h1>
+
+  <form class="controls">
+    <input class="text-input" type="text" value="If we lose our power what leverage do we have left?" aria-label="Text">
+    <select class="effect-select" aria-label="Effect">
+      <option value="random-spacing">Random letter spacing</option>
+      <option value="random-layout">Random spacing + line height</option>
+      <option value="hover-gap">Hover to space letters</option>
+      <option value="hover-spread">Hover to space all letters</option>
+    </select>
+    <button class="shuffle" type="button">Shuffle</button>
+    <label><input class="accessible" type="checkbox"> Accessibility</label>
+  </form>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
