@@ -1,0 +1,154 @@
+@font-face {
+  font-family: 'Brut Grotesque';
+  src: url('/src/assets/fonts/Brut_Grotesque-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+}
+
+html, body {
+  margin: 0;
+  background: #efe4dc;
+  color: #000;
+  font-family: 'Brut Grotesque', sans-serif;
+}
+
+.intro, .outro {
+  min-height: 80vh;
+  padding: 80px;
+  box-sizing: border-box;
+}
+
+.intro h1 {
+  margin: 0;
+  font-size: clamp(40px, 6vw, 96px);
+  font-weight: 500;
+}
+
+.outro {
+  display: flex;
+  align-items: flex-end;
+}
+
+.scene {
+  height: 300vh;
+  --p: -1;
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #efe4dc;
+}
+
+.art {
+  position: relative;
+  width: min(92vw, 160vh);
+  aspect-ratio: 1920 / 1080;
+}
+
+.layer {
+  position: absolute;
+  height: auto;
+  mix-blend-mode: multiply;
+  will-change: transform;
+  user-select: none;
+  pointer-events: none;
+  /* Each layer moves by --p × its own amounts (set by the sliders):
+     --y vh up, --x vw sideways, --r degrees of rotation, --s scale change */
+  transform:
+    translate(-50%, -50%)
+    translate(calc(var(--p) * var(--x, 0) * 1vw), calc(var(--p) * var(--y, 0) * -1vh))
+    rotate(calc(var(--base-r, 0deg) + var(--p) * var(--r, 0) * 1deg))
+    scale(calc(1 + var(--p) * var(--s, 0)));
+}
+
+.layer-1 { 
+  left: 52%; 
+  top: 53%; 
+  width: 48%; 
+}
+
+.layer-2 { 
+  left: 41.28%; 
+  top: 57.66%; 
+  width: 30.36%; 
+  --base-r: 60deg; 
+}
+
+.layer-3 { 
+  left: 68%; 
+  top: 53%; 
+  width: 13.5%; 
+  mix-blend-mode: var(--blend, hard-light); 
+}
+
+/* Parameter panel */
+.panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(320px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.panel summary {
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.controls {
+  display: grid;
+  gap: 6px;
+  padding: 0 14px 14px;
+}
+
+.controls fieldset {
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin: 6px 0 0;
+  padding: 8px 0 0;
+  display: grid;
+  gap: 6px;
+}
+
+.controls legend {
+  padding: 0;
+  font-weight: 500;
+}
+
+.controls label {
+  display: grid;
+  grid-template-columns: 90px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.controls input[type='range'] { width: 100%; }
+
+.controls .buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.controls button, .controls select {
+  font: inherit;
+}
+
+.controls button { flex: 1; }
