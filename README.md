@@ -16,7 +16,7 @@ cd Creative-Coding
 npm install
 ```
 
-`npm install` downloads Vite and p5.js into `node_modules/`. That folder is in `.gitignore` and never gets committed.
+`npm install` downloads Vite, p5.js, PixiJS and html-to-image into `node_modules/`. That folder is in `.gitignore` and never gets committed.
 
 ## Run locally
 
@@ -36,9 +36,10 @@ Then open **http://localhost:5173/Creative-Coding/**. Include `/Creative-Coding/
 Creative-Coding/
 ├── index.html              Home page: lists every sketch automatically
 ├── folder/                 One subfolder per sketch
-│   └── animation-cross-fade-melt-effect/   p5.js photo-melt animation
-│       ├── index.html
-│       └── sketch.js
+│   ├── animation-cross-fade-melt-effect/   p5.js photo-melt animation
+│   │   ├── index.html
+│   │   └── sketch.js
+│   └── halftone-effect/    GPU halftone hover + page transition (PixiJS)
 ├── src/
 │   ├── main.js             Home page script
 │   ├── style.css           Home page styles
@@ -93,6 +94,12 @@ function preload() {
 ```
 
 > ⚠️ Don't load files with a plain path such as `loadImage('photos/photo-1.webp')`. It works in `npm run dev` but **breaks on the live site**, because Vite only includes files you import in the build.
+
+## GPU sketches
+
+Most sketches are p5.js or plain canvas. `folder/halftone-effect/` is different: it runs custom shaders through [PixiJS](https://pixijs.com/) — WGSL on WebGPU, with a GLSL/WebGL2 fallback. Page transitions snapshot the whole page and halftone it (photos, text and form included) with html-to-image. Both packages are installed by `npm install`.
+
+It needs a browser with WebGPU or WebGL2. Without either, the page still works and simply skips the effect. See `folder/halftone-effect/README.md` for the API and the design notes.
 
 ## Commands
 
