@@ -5,7 +5,7 @@
   --line: #dddddd;
   --accent: #9c3410;
   color-scheme: light;
-  font-family: 'Brut Grotesque', 'Helvetica Neue', Arial, sans-serif;
+  font-family: "Brut Grotesque", "Helvetica Neue", Arial, sans-serif;
   font-weight: 500;
 }
 
@@ -30,7 +30,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: clamp(12px, 2vh, 24px);
-  padding: clamp(14px, 2.2vw, 32px) clamp(16px, 3vw, 44px) clamp(16px, 2.6vw, 34px);
+  padding: clamp(14px, 2.2vw, 32px) clamp(16px, 3vw, 44px)
+    clamp(16px, 2.6vw, 34px);
 }
 
 .site-header {
@@ -61,11 +62,13 @@ body {
   text-decoration: none;
   padding-bottom: 2px;
   border-bottom: 1px solid transparent;
-  transition: color 160ms ease, border-color 160ms ease;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
 }
 
 .site-nav a:hover,
-.site-nav a[aria-current='page'] {
+.site-nav a[aria-current="page"] {
   color: var(--ink);
   border-bottom-color: var(--ink);
 }
@@ -117,7 +120,9 @@ body {
   white-space: nowrap;
   padding-bottom: 3px;
   border-bottom: 1px solid var(--line);
-  transition: border-color 160ms ease, color 160ms ease;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease;
 }
 
 .next:hover {
@@ -148,7 +153,6 @@ body {
   .next {
     justify-self: start;
   }
-
 }
 
 @media (max-height: 620px) {
@@ -167,7 +171,6 @@ body {
     transition: none;
   }
 }
-
 
 .view-effects {
   grid-template-rows: auto auto;
@@ -215,7 +218,6 @@ body {
   position: relative;
   overflow: hidden;
   background: var(--tile, transparent);
-  padding: clamp(16px, 1.9vh, 18px) clamp(18px, 1.5vw, 24px);
   aspect-ratio: 447 / 566;
 }
 
@@ -226,8 +228,6 @@ body {
   object-fit: cover;
 }
 
-
-
 .view-human {
   position: relative;
   display: block;
@@ -236,12 +236,12 @@ body {
   overflow: hidden;
 }
 
-body[data-page='coalition'] #app {
+body[data-page="coalition"] #app {
   padding: 0;
   gap: 0;
 }
 
-body[data-page='coalition'] .site-header {
+body[data-page="coalition"] .site-header {
   display: none;
 }
 
@@ -298,7 +298,7 @@ body[data-page='coalition'] .site-header {
 .hf-copy h1 {
   margin: 0;
   color: #fff;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(34px, 4.8vw, 68px);
   font-weight: 400;
   line-height: 0.98;
@@ -461,7 +461,6 @@ body[data-page='coalition'] .site-header {
     max-height: 46vh;
   }
 }
-
 
 .page-boot {
   display: none;
