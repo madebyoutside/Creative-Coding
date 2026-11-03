@@ -15,9 +15,9 @@
   <section class="scene">
     <div class="stage">
       <div class="art">
-        <img class="layer layer-1" src="./images/layer-1.png" alt="">
-        <img class="layer layer-2" src="./images/layer-2.png" alt="">
-        <img class="layer layer-3" src="./images/layer-3.png" alt="">
+        <img class="layer layer-1" src="./images/layer-1.webp" alt="">
+        <img class="layer layer-2" src="./images/layer-2.webp" alt="">
+        <img class="layer layer-3" src="./images/layer-3.webp" alt="">
       </div>
     </div>
   </section>
@@ -30,6 +30,7 @@
     <summary>Parameters</summary>
     <form class="controls">
       <label><span>Smoothness</span><input type="range" name="lerp" min="0.02" max="0.3" step="0.01" value="0.1"><output>0.1</output></label>
+      <label><span>Scene drift (vh)</span><input type="range" data-target=".scene" name="--drift" min="0" max="80" step="1" value="50"><output>50</output></label>
       <fieldset>
         <legend>Layer 1 · flag</legend>
         <label><span>Y travel (vh)</span><input type="range" data-target=".layer-1" name="--y" min="-80" max="80" step="1" value="8"><output>8</output></label>

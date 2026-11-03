@@ -13,7 +13,7 @@ html, body {
 }
 
 .intro, .outro {
-  min-height: 80vh;
+  min-height: 100vh;
   padding: 80px;
   box-sizing: border-box;
 }
@@ -30,15 +30,12 @@ html, body {
 }
 
 .scene {
-  height: 300vh;
   --p: -1;
+  overflow-x: clip;
 }
 
 .stage {
-  position: sticky;
-  top: 0;
   height: 100vh;
-  overflow: hidden;
   display: grid;
   place-items: center;
   background: #efe4dc;
@@ -48,6 +45,8 @@ html, body {
   position: relative;
   width: min(92vw, 160vh);
   aspect-ratio: 1920 / 1080;
+  will-change: transform;
+  transform: translateY(calc(var(--p) * var(--drift, 0) * 1vh));
 }
 
 .layer {

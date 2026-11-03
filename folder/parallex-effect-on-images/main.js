@@ -10,9 +10,12 @@ const lenis = new Lenis({
 
 function update() {
   const rect = scene.getBoundingClientRect();
-  const progress = Math.min(1, Math.max(0, -rect.top / (rect.height - innerHeight)));
+  // 0 when the scene's top enters the bottom of the viewport,
+  // 1 when its bottom leaves the top, so the layers move with normal scrolling.
+  const progress = Math.min(1, Math.max(0, (innerHeight - rect.top) / (innerHeight + rect.height)));
   scene.style.setProperty('--p', progress * 2 - 1);
 }
+
 
 lenis.on('scroll', update);
 addEventListener('resize', update);
