@@ -86,6 +86,7 @@ export async function prepareImage(img) {
   const targetWidth = clamp(Math.round(fit.dw * dpr), 1, MAX_TEXTURE);
   const targetHeight = clamp(Math.round(fit.dh * dpr), 1, MAX_TEXTURE);
   const key = [
+    img.currentSrc || img.src || '',
     Math.round(rect.width),
     Math.round(rect.height),
     Math.round(fit.sx),

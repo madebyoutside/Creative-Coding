@@ -97,6 +97,7 @@ export class Halftone {
     this.overlay.onScroll = () => {
       this.transitionController.onScroll();
       this.hoverController.syncRect();
+      this.pinController.sync();
     };
     return true;
   }
@@ -135,12 +136,25 @@ export class Halftone {
   setParams(partial) {
     this.params = normalizeParams(partial, this.params);
     this.hoverController?.applyParams();
+    if (this.supported && !this.busy) void this.pinController?.refreshAll();
     return this.params;
   }
 
 /** Bake one or more halftone layers over an image. */
   pin(element, options) {
     return this.pinController?.pin(element, options);
+  }
+
+/** Replace a pinned image's complete config and rebuild it. */
+  updatePin(element, options = {}) {
+    if (this.overlay.destroyed || !this.supported || !element) return Promise.resolve(null);
+    if (this.transitionController?.busy) return Promise.resolve(null);
+    return this.pinController.update(element, options);
+  }
+
+/** Read the live config for a pinned image. */
+  getPinConfig(element) {
+    return this.pinController?.get(element)?.options ?? null;
   }
 
 /** Animate a pinned image's top layer offset. */
@@ -166,6 +180,11 @@ export class Halftone {
     if (this.busy) return false;
     this.hoverController?.cancel();
     return this.transitionController.run(update, options);
+  }
+
+/** Canvas of the live pattern layer, including paper/photo compositing. */
+  extractPattern() {
+    return this.overlay.extractPattern?.() ?? null;
   }
 
 /** Prewarm the cached outgoing transition snapshot. */

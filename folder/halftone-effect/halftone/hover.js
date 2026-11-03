@@ -104,7 +104,16 @@ export class HoverController {
     const height = entry.fit.dh;
     if (width < 2 || height < 2) return;
 
-    const blurEntry = this.overlay.acquireBlur(entry.texture, width, height, params.dotSize);
+    const designWidth = Math.max(1, params.designWidth);
+    const designHeight = Math.max(1, params.designHeight ?? (designWidth * height) / width);
+    const hoverParams = { ...params, designWidth, designHeight };
+    const blurEntry = this.overlay.acquireBlur(
+      entry.texture,
+      designWidth,
+      designHeight,
+      params.dotSize,
+      params.renderScale,
+    );
     const surface = new Surface({
       width,
       height,
@@ -112,7 +121,8 @@ export class HoverController {
       y: rect.top + entry.fit.dy,
       resolution: this.overlay.hoverResolution,
       blurEntry,
-      params,
+      inputTexture: entry.texture,
+      params: hoverParams,
     });
     this.overlay.hoverLayer.addChild(surface.sprite);
     const record = this.overlay.trackSurface(surface, blurEntry);

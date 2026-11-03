@@ -1,4 +1,4 @@
-import { Container, RendererType, Texture, TextureSource, autoDetectRenderer } from 'pixi.js';
+import { Container, RenderTexture, RendererType, Texture, TextureSource, autoDetectRenderer } from 'pixi.js';
 import { BlurCache, bakeBlur } from './surface.js';
 import { invalidateTextures, prepareImage } from './texture.js';
 import { Tween, nextFrame } from './utils.js';
@@ -15,6 +15,7 @@ export class Overlay {
     this.destroyed = false;
 
     this.stage = null;
+    this.patternLayer = null;
     this.hoverLayer = null;
     this.transitionLayer = null;
     this.renderer = null;
@@ -79,13 +80,14 @@ export class Overlay {
       document.body.appendChild(canvas);
 
       this.stage = new Container();
+      this.patternLayer = new Container();
       this.hoverLayer = new Container();
       this.transitionLayer = new Container();
-      this.stage.addChild(this.hoverLayer, this.transitionLayer);
+      this.stage.addChild(this.patternLayer, this.hoverLayer, this.transitionLayer);
       this._blurCache = new BlurCache(this.renderer);
 
       window.addEventListener('resize', this._handleResize, { passive: true });
-      window.addEventListener('scroll', this._handleScroll, { passive: true });
+      window.addEventListener('scroll', this._handleScroll, { passive: true, capture: true });
       document.addEventListener('visibilitychange', this._handleVisibility);
 
       this.requestRender();
@@ -120,6 +122,29 @@ export class Overlay {
   _schedule() {
     if (this._raf != null || this.destroyed) return;
     this._raf = requestAnimationFrame(this._tick);
+  }
+
+/** Set how the pattern canvas composites with the page. */
+  setCanvasBlend(mode = 'multiply', opacity = 1) {
+    if (!this.canvas) return;
+    this.canvas.style.mixBlendMode = mode || 'normal';
+    this.canvas.style.opacity = String(opacity ?? 1);
+  }
+
+/** Render the live pattern layer to a canvas for transition snapshots. */
+  extractPattern() {
+    if (!this.renderer || !this.patternLayer || this.destroyed) return null;
+    const width = Math.max(1, window.innerWidth);
+    const height = Math.max(1, window.innerHeight);
+    const target = RenderTexture.create({ width, height, resolution: 1 });
+    try {
+      this.renderer.render({ container: this.patternLayer, target, clear: true });
+      return this.renderer.extract.canvas(target);
+    } catch {
+      return null;
+    } finally {
+      target.destroy(true);
+    }
   }
 
 /** Mark the overlay dirty and schedule the next frame. */
@@ -257,10 +282,12 @@ export class Overlay {
   }
 
 /** Acquire a shared blurred texture for the given dot pitch. */
-  acquireBlur(texture, width, height, dotSize) {
-    const snapped = Math.max(1, Math.round(dotSize * 2) / 2);
-    const key = `${texture.uid}|${Math.round(width)}x${Math.round(height)}|${snapped}`;
-    return this._blurCache.acquire(key, () => bakeBlur(this.renderer, texture, width, height, snapped));
+  acquireBlur(texture, designWidth, designHeight, dotSize, renderScale = 2) {
+    const snapped = Math.max(0.5, Math.round(dotSize * 2) / 2);
+    const key = `${texture.uid}|${Math.round(designWidth)}x${Math.round(designHeight)}|${snapped}|${renderScale}`;
+    return this._blurCache.acquire(key, () =>
+      bakeBlur(this.renderer, texture, designWidth, designHeight, snapped, renderScale),
+    );
   }
 
 /** Track a surface so resize/destroy can release it. */
@@ -313,7 +340,7 @@ export class Overlay {
     this._blurCache = null;
 
     window.removeEventListener('resize', this._handleResize);
-    window.removeEventListener('scroll', this._handleScroll);
+    window.removeEventListener('scroll', this._handleScroll, true);
     document.removeEventListener('visibilitychange', this._handleVisibility);
 
     invalidateTextures();
@@ -325,6 +352,7 @@ export class Overlay {
     }
     this.renderer = null;
     this.stage = null;
+    this.patternLayer = null;
     this.hoverLayer = null;
     this.transitionLayer = null;
     this.onResize = null;

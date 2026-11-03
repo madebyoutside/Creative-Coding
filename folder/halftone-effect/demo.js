@@ -1,22 +1,22 @@
 import photo2 from "/src/assets/halftone-effect/photo-2.jpg";
 import photo5 from "/src/assets/halftone-effect/photo-5.png";
 import fontUrl from "/src/assets/fonts/Brut_Grotesque-Medium.otf";
+import {
+  clearPending,
+  decodeSnapshot,
+  finishBoot,
+  loadPending,
+  savePending,
+  setBootImage,
+  snapshotPage,
+} from "./halftone/page-transition.js";
 
 const photos = { a: photo2, e: photo5 };
 
-const views = Object.fromEntries(
-  [...document.querySelectorAll(".view")].map((view) => [
-    view.dataset.view,
-    view,
-  ]),
-);
-const navLinks = [...document.querySelectorAll("[data-nav]")];
 const notice = document.querySelector("#notice");
 
 let halftone = null;
-let currentPage = "index";
-let chain = Promise.resolve();
-let pendingNav = 0;
+let leaving = false;
 
 const debug = {
   ready: false,
@@ -41,85 +41,11 @@ const debug = {
   get lastTransition() {
     return halftone?.lastTransition ?? null;
   },
-  navigate: (name) => navigate(name),
+  navigate: (url) => {
+    window.location.assign(url);
+  },
 };
 window.__halftoneDebug = debug;
-
-/** Resolve the initial view from the URL hash. */
-function pageFromHash() {
-  const name = window.location.hash.replace("#", "");
-  return views[name] ? name : "index";
-}
-
-/** Show one view, refresh nav state and rebake pinned effects. */
-function applyPage(name, { push = false, focus = false } = {}) {
-  currentPage = name;
-  document.body.classList.toggle("is-coalition", name === "studio");
-  for (const [key, view] of Object.entries(views)) view.hidden = key !== name;
-  for (const link of navLinks) {
-    if (link.dataset.nav === name) link.setAttribute("aria-current", "page");
-    else link.removeAttribute("aria-current");
-  }
-  if (push) window.history.pushState({ page: name }, "", `#${name}`);
-  if (focus) views[name]?.querySelector("h1")?.focus({ preventScroll: true });
-  halftone?.sync();
-  if (halftone?.supported) {
-    window.requestAnimationFrame(() => {
-      halftone.sync();
-      void setupPins();
-    });
-  }
-}
-
-/** Crossfade to another view with the snapshot transition. */
-function navigate(name, { push = true } = {}) {
-  if (!views[name] || name === currentPage) return;
-
-  const update = () => applyPage(name, { push, focus: true });
-
-  if (!halftone || !halftone.supported) {
-    update();
-    return;
-  }
-
-  pendingNav += 1;
-  document.documentElement.setAttribute("aria-busy", "true");
-  chain = chain
-    .then(() =>
-      halftone.transition(update, {
-        // Outgoing teal, incoming olive; the page multiply is skipped.
-        outgoingParams: {
-          gradient: { dark: "#82C1C0", light: "#FFFFFF", blend: "replace" },
-        },
-        incomingParams: {
-          gradient: { dark: "#B7BB92", light: "#FFFFFF", blend: "replace" },
-        },
-      }),
-    )
-    .catch((error) => {
-      console.error("[demo] transition failed", error);
-      update();
-    })
-    .finally(() => {
-      pendingNav -= 1;
-      if (pendingNav <= 0)
-        document.documentElement.removeAttribute("aria-busy");
-    });
-}
-
-document.addEventListener("click", (event) => {
-  const link = event.target.closest?.("[data-nav]");
-  if (!link) return;
-  const name = link.dataset.nav;
-  if (!views[name]) return;
-  event.preventDefault();
-  navigate(name, { push: true });
-});
-
-window.addEventListener("popstate", () => {
-  const name = pageFromHash();
-  if (name !== currentPage) navigate(name, { push: false });
-});
 
 async function start() {
   for (const img of document.querySelectorAll("img[data-photo]")) {
@@ -140,13 +66,12 @@ async function start() {
     halftone = await createHalftone({
       params: {
         dotSize: 4,
+        designWidth: 399,
         dotScale: 1.05,
         softness: 0,
-        rotation: -Math.PI, // Figma slider is -180 degrees
+        rotation: -180,
         center: [0.1, 0.1],
         colorMode: 0,
-        gradient: { dark: "#82C1C0", light: "#FFFFFF", blend: "replace" },
-        multiplyColor: "#CAD48A",
       },
       zIndex: 40,
     });
@@ -163,72 +88,223 @@ async function start() {
   }
 
   await setupPins();
+  await resumePage();
 }
 
-const SINGLE = {
-  "single-green": {
-    layers: [
-      { gradient: { dark: "#5E8C4A", light: "#FFFFFF" }, multiplyColor: "#CAD48A" },
-    ],
-  },
-  "single-orange": {
-    layers: [
-      { gradient: { dark: "#D14A2E", light: "#FFFFFF" }, multiplyColor: "#F26B4E" },
-    ],
-  },
-  "single-teal": {
-    layers: [
-      { gradient: { dark: "#1F7A7A", light: "#FFFFFF" }, multiplyColor: "#A8D8D8" },
-    ],
-  },
+/** Resume a cross-document transition on the incoming actual page. */
+async function resumePage() {
+  if (!halftone?.supported) return;
+  const pending = await loadPending();
+  if (!pending) return;
+
+  setBootImage(pending.png);
+  let outgoing = null;
+  try {
+    outgoing = await decodeSnapshot(pending.png);
+    await halftone.transition(() => {}, {
+      outgoing,
+      outgoingParams: {
+        gradient: { dark: "#82C1C0", light: "#FFFFFF" },
+      },
+      incomingParams: {
+        gradient: { dark: "#B7BB92", light: "#FFFFFF" },
+      },
+      onOutReady: finishBoot,
+    });
+  } catch (error) {
+    console.error("[demo] page transition failed", error);
+  } finally {
+    outgoing?.bitmap?.close?.();
+    await clearPending();
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* EDIT THESE TWO OBJECTS TO CHANGE THE ROWS                           */
+/* ------------------------------------------------------------------ */
+
+// Row 1 — the commit's default one-layer treatment.
+const FIRST = {
+  // Pattern compositing: colour mode shows the gradient on the paper.
+  pattern: { on: "color", paper: "#ccd391" },
+
+  // One layer. Change the two colours to recolour the whole image.
+  layers: [
+    {
+      gradient: {
+        stops: [
+          { position: 0, color: "#94c182" },
+          { position: 1, color: "#ffffff" },
+        ],
+      },
+    },
+  ],
 };
 
-const DOUBLE = {
-  "two-orange-green": {
-    layers: [
-      { gradient: { dark: "#FFFFFF", light: "#FF512F" }, multiplyColor: null, offset: [0, 0], alpha: 0.95, negative: true },
-      { gradient: { dark: "#5E8C4A", light: "#FFFFFF" }, multiplyColor: null, offset: [4, 4], blend: "multiply", alpha: 0.8 },
-    ],
-    hoverOffset: [14, 14],
-  },
-  "two-magenta-teal": {
-    layers: [
-      { gradient: { dark: "#D23A6A", light: "#FFFFFF" }, multiplyColor: null, offset: [0, 0], alpha: 0.95 },
-      { gradient: { dark: "#2E8C8C", light: "#FFFFFF" }, multiplyColor: null, offset: [4, 4], blend: "multiply", alpha: 0.8 },
-    ],
-    hoverOffset: [14, 14],
-  },
-  "two-blue-gold": {
-    layers: [
-      { gradient: { dark: "#3556C4", light: "#FFFFFF" }, multiplyColor: null, offset: [0, 0], alpha: 0.95 },
-      { gradient: { dark: "#C79A2A", light: "#FFFFFF" }, multiplyColor: null, offset: [4, 4], blend: "multiply", alpha: 0.8 },
-    ],
-    hoverOffset: [14, 14],
-  },
+// Row 2 — two gradient layers multiplied together.
+const ORANGE_LAYER = {
+  gradient: { dark: "#FFFFFF", light: "#FF512F" },
+  alpha: 0.95,
+  negative: true,
 };
 
-/** Bake the row images' static and two-layer hover treatments. */
+const GREEN_LAYER = {
+  gradient: { dark: "#5E8C4A", light: "#FFFFFF" },
+  blend: "multiply",
+  alpha: 0.55,
+};
+
+const SECOND = {
+  pattern: { on: "color", paper: "#cad48a" },
+  layers: [ORANGE_LAYER, GREEN_LAYER],
+  // Pixels the top layer moves on hover.
+  hoverOffset: [18, 18],
+};
+
+// Maps data-fx attributes in index.html to the objects above.
+const PINS = {
+  "single-default": FIRST,
+  "two-hover": SECOND,
+};
+
+const ROW_IMAGES = {
+  first: document.querySelector('img[data-fx="single-default"]'),
+  second: document.querySelector('img[data-fx="two-hover"]'),
+};
+
+const ROW_CONFIGS = {
+  first: FIRST,
+  second: SECOND,
+};
+
+/** Pin the live row treatments and wire the top-layer hover shift. */
 async function setupPins() {
   if (!halftone || !halftone.supported) return;
   const jobs = [];
   for (const img of document.querySelectorAll("img[data-fx]")) {
     const key = img.dataset.fx;
-    const config = SINGLE[key] ?? DOUBLE[key];
+    const config = PINS[key];
     if (!config) continue;
     jobs.push(halftone.pin(img, config));
-    if (DOUBLE[key]) {
-      const base = config.layers[config.layers.length - 1].offset;
-      img.addEventListener("pointerenter", () => {
-        halftone.shiftPin(img, config.hoverOffset, 240);
-      });
-      img.addEventListener("pointerleave", () => {
-        halftone.shiftPin(img, base, 260);
-      });
-    }
+    const target = img.parentElement;
+    target.addEventListener("pointerenter", () => {
+      if (config.hoverOffset) halftone.shiftPin(img, config.hoverOffset, 240);
+    });
+    target.addEventListener("pointerleave", () => {
+      const top = config.layers[config.layers.length - 1];
+      if (config.hoverOffset && top)
+        halftone.shiftPin(img, top.offset ?? [0, 0], 260);
+    });
   }
   await Promise.all(jobs);
   halftone.sync();
 }
+
+function replaceConfig(target, next) {
+  for (const key of Object.keys(target)) delete target[key];
+  Object.assign(target, next);
+}
+
+async function applyRow(name) {
+  if (!halftone?.supported) return null;
+  const img = ROW_IMAGES[name];
+  if (!img) return null;
+  return halftone.updatePin(img, ROW_CONFIGS[name]);
+}
+
+/**
+ * Console API. Every value from the reference panel is reachable here.
+ *
+ *   __demo.set('first', { pattern, layers })
+ *   __demo.setPattern('first', { paper: '#ffffff', blend: 'multiply' })
+ *   __demo.setLayer('second', 1, { alpha: 0.5, blend: 'multiply' })
+ *   __demo.setGradient('second', 1, { stops: [...] })
+ *   __demo.hover('second', [24, 24])
+ *   __demo.setGlobal({ dotSize: 8, colorMode: 1 })
+ */
+window.__demo = {
+  get first() {
+    return ROW_CONFIGS.first;
+  },
+  get second() {
+    return ROW_CONFIGS.second;
+  },
+
+  get(name) {
+    return ROW_CONFIGS[name] ?? null;
+  },
+
+  /** Replace a whole row config. */
+  set(name, config) {
+    if (!ROW_CONFIGS[name] || !config) return Promise.resolve(null);
+    replaceConfig(ROW_CONFIGS[name], config);
+    return applyRow(name);
+  },
+
+  /** Change one layer: gradient, halftone, alpha, offset, blend, negative. */
+  setLayer(name, index, layer) {
+    const config = ROW_CONFIGS[name];
+    if (!config?.layers?.[index]) return Promise.resolve(null);
+    config.layers[index] = { ...config.layers[index], ...layer };
+    return applyRow(name);
+  },
+
+  addLayer(name, layer) {
+    const config = ROW_CONFIGS[name];
+    if (!config || !layer) return Promise.resolve(null);
+    config.layers.push(layer);
+    return applyRow(name);
+  },
+
+  removeLayer(name, index) {
+    const config = ROW_CONFIGS[name];
+    if (!config?.layers || config.layers.length <= 1)
+      return Promise.resolve(null);
+    config.layers.splice(index, 1);
+    return applyRow(name);
+  },
+
+  setPattern(name, pattern) {
+    const config = ROW_CONFIGS[name];
+    if (!config) return Promise.resolve(null);
+    config.pattern = { ...(config.pattern || {}), ...pattern };
+    return applyRow(name);
+  },
+
+  setGradient(name, index, gradient) {
+    const config = ROW_CONFIGS[name];
+    if (!config?.layers?.[index]) return Promise.resolve(null);
+    config.layers[index].gradient = gradient;
+    return applyRow(name);
+  },
+
+  hover(name, offset) {
+    const config = ROW_CONFIGS[name];
+    if (!config) return Promise.resolve(null);
+    config.hoverOffset = offset;
+    return applyRow(name);
+  },
+
+  setGlobal(params) {
+    return halftone?.setParams(params) ?? null;
+  },
+
+  async image(name, src) {
+    const img = ROW_IMAGES[name];
+    if (!img || !src) return null;
+    img.src = src;
+    await img.decode().catch(() => {});
+    return applyRow(name);
+  },
+
+  apply(name) {
+    return applyRow(name);
+  },
+};
+
+console.info(
+  '[demo] Control API: window.__demo. Try __demo.setPattern("first", { paper: "#fff" }) or __demo.setGlobal({ dotSize: 8 }).',
+);
 
 const hfForm = document.querySelector(".hf-form");
 if (hfForm) {
@@ -257,8 +333,36 @@ for (const button of document.querySelectorAll("[data-copy]")) {
   });
 }
 
-const initialPage = pageFromHash();
-applyPage(initialPage, { push: false, focus: false });
-window.history.replaceState({ page: initialPage }, "", `#${initialPage}`);
+document.addEventListener("click", (event) => {
+  const link = event.target.closest?.("a[data-page-transition]");
+  if (!link || leaving) return;
+  if (
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey ||
+    link.target ||
+    link.hasAttribute("download")
+  ) {
+    return;
+  }
+  const url = new URL(link.href, window.location.href);
+  if (url.origin !== window.location.origin) return;
+  if (!halftone?.supported) return;
+
+  event.preventDefault();
+  leaving = true;
+  document.documentElement.setAttribute("aria-busy", "true");
+  void (async () => {
+    try {
+      await savePending(await snapshotPage());
+    } catch (error) {
+      console.error("[demo] could not save outgoing page", error);
+    }
+    window.location.assign(url.href);
+  })();
+});
 
 void start();

@@ -14,7 +14,7 @@ const OUT_HOLD_MS = 1400;
 const INCOMING_DELAY_MS = 240;
 const SWAP_MS = 120;
 const CROSSFADE_MS = 1400;
-const RESOLVE_MS = 300;
+const RESOLVE_MS = 700;
 const INCOMING_TIMEOUT_MS = 1500;
 
 /** Snapshot page transition: outgoing hold, incoming crossfade, cache. */
@@ -60,12 +60,37 @@ export class TransitionController {
 
   /** Snapshot the current viewport; returns null on failure. */
   async _capture() {
+    const patternLayer = this.overlay.patternLayer;
+    const wasVisible = patternLayer?.visible ?? false;
+    if (patternLayer) patternLayer.visible = true;
     try {
-      const bitmap = await captureViewport(this._captureOptions());
-      return { bitmap, width: bitmap.width, height: bitmap.height };
+      const bitmap = await captureViewport({
+        ...this._captureOptions(),
+        revealHidden: false,
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext('2d');
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close?.();
+
+      // html-to-image cannot see the Pixi canvas; composite its pattern layer
+      // with the same multiply the live page uses.
+      const pattern = this.overlay.extractPattern();
+      if (pattern) {
+        context.save();
+        context.globalCompositeOperation = 'multiply';
+        context.drawImage(pattern, 0, 0, canvas.width, canvas.height);
+        context.restore();
+      }
+
+      return { bitmap: canvas, width: canvas.width, height: canvas.height };
     } catch (error) {
       this.overlay.warn("snapshot", error);
       return null;
+    } finally {
+      if (patternLayer) patternLayer.visible = wasVisible;
     }
   }
 
@@ -150,39 +175,34 @@ export class TransitionController {
     }
 
     this._transitioning = true;
+    this.overlay.setCanvasBlend('normal');
+    if (this.overlay.patternLayer) this.overlay.patternLayer.visible = false;
     const debugStart = performance.now();
     let debugIncomingMs = -1;
     let debugIncomingStarted = 0;
 
-    const resolve = (value) => {
-      const input = { ...(value ?? this.getTransitionParams()) };
-      input.multiplyColor = value?.multiplyColor ?? null;
-      return normalizeParams(input, this.getParams());
-    };
-    const outgoingParams = resolve(options.outgoingParams ?? options.params);
-    const incomingParams = resolve(options.incomingParams ?? options.params);
+    const resolve = (value) => normalizeParams(value ?? this.getTransitionParams(), this.getParams());
     const width = Math.max(1, window.innerWidth);
     const height = Math.max(1, window.innerHeight);
-    const lightStop =
-      outgoingParams.gradient?.light ??
-      (outgoingParams.colorMode === 1 ? [0, 0, 0] : [1, 1, 1]);
-    const multiply = outgoingParams.multiplyColor ?? [1, 1, 1];
-    const paper = [
-      lightStop[0] * multiply[0],
-      lightStop[1] * multiply[1],
-      lightStop[2] * multiply[2],
-    ];
+    const outgoingParams = { ...resolve(options.outgoingParams ?? options.params), designWidth: width, designHeight: height };
+    const incomingParams = { ...resolve(options.incomingParams ?? options.params), designWidth: width, designHeight: height };
+    const gradientStops = outgoingParams.gradient?.stops;
+    const lightStop = gradientStops?.length
+      ? gradientStops[gradientStops.length - 1].color.slice(0, 3)
+      : outgoingParams.colorMode === 1 ? [0, 0, 0] : [1, 1, 1];
+    const paper = lightStop;
     const paperInt =
       (Math.round(paper[0] * 255) << 16) |
       (Math.round(paper[1] * 255) << 8) |
       Math.round(paper[2] * 255);
     const background = this.options.backingColor ?? paperInt;
 
-    let outgoing = this._snapshot;
+    let outgoing = options.outgoing ?? this._snapshot;
     this._snapshot = null;
     let incoming = null;
     let outTexture = null;
     let inTexture = null;
+    let realSurface = null;
     let outRecord = null;
     let inRecord = null;
     let backing = null;
@@ -203,12 +223,14 @@ export class TransitionController {
         width,
         height,
         outgoingParams.dotSize,
+        outgoingParams.renderScale,
       );
       const outSurface = new Surface({
         width,
         height,
         resolution: this.overlay.transitionResolution,
         blurEntry: outBlur,
+        inputTexture: outTexture,
         params: outgoingParams,
       });
       outRecord = this.overlay.trackSurface(outSurface, outBlur);
@@ -225,6 +247,12 @@ export class TransitionController {
       await this.overlay.nextPaint();
       await this.overlay.nextPaint();
       if (this.overlay.destroyed) return false;
+
+      try {
+        options.onOutReady?.();
+      } catch (error) {
+        this.overlay.warn('out-ready', error);
+      }
 
       await this.overlay.wait(OUT_HOLD_MS);
       await this.overlay.wait(SWAP_MS);
@@ -269,18 +297,29 @@ export class TransitionController {
           width,
           height,
           incomingParams.dotSize,
+          incomingParams.renderScale,
         );
         const inSurface = new Surface({
           width,
           height,
           resolution: this.overlay.transitionResolution,
           blurEntry: inBlur,
+          inputTexture: inTexture,
           params: incomingParams,
         });
         inRecord = this.overlay.trackSurface(inSurface, inBlur);
         inSurface.setReveal(0);
         inSurface.setDotScale(incomingParams.dotScale);
         this.overlay.transitionLayer.addChildAt(inSurface.sprite, 1);
+
+        // The incoming page snapshot already contains the live pattern layer.
+        // Fade that exact image over the halftone before swapping to the real
+        // page, so the resolve is not a flat-paper frame.
+        realSurface = new Sprite(inTexture);
+        realSurface.width = width;
+        realSurface.height = height;
+        realSurface.alpha = 0;
+        this.overlay.transitionLayer.addChild(realSurface);
         this.overlay.requestRender();
 
         this.overlay.tween({
@@ -313,6 +352,15 @@ export class TransitionController {
           onUpdate: (value) => {
             if (!inRecord.destroyed) inSurface.setReveal(value);
             if (backing && !backing.destroyed) backing.alpha = value;
+          },
+        });
+        this.overlay.tween({
+          from: 0,
+          to: 1,
+          duration: RESOLVE_MS,
+          ease: easeOutCubic,
+          onUpdate: (value) => {
+            if (realSurface && !realSurface.destroyed) realSurface.alpha = value;
           },
         });
         await this.overlay.wait(RESOLVE_MS);
@@ -351,6 +399,7 @@ export class TransitionController {
       } else if (incoming) {
         incoming.bitmap?.close?.();
       }
+      realSurface?.destroy();
       disposeTexture(outTexture);
       disposeTexture(inTexture);
       outgoing?.bitmap?.close?.();
@@ -367,6 +416,8 @@ export class TransitionController {
         totalMs: performance.now() - debugStart,
       };
       this._transitioning = false;
+      this.overlay.setCanvasBlend('multiply');
+      if (this.overlay.patternLayer) this.overlay.patternLayer.visible = true;
       this.overlay.requestRender();
       this.overlay.flushResize();
       this._scheduleIdle();

@@ -6,162 +6,57 @@
     <title>Halftone</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="./demo.css" />
+    <script>
+      try {
+        if (sessionStorage.getItem('halftone:page')) {
+          document.documentElement.classList.add('halftone-booting');
+        }
+      } catch {}
+    </script>
   </head>
-  <body>
+  <body data-page="index">
     <div id="app">
+      <div class="page-boot" data-halftone-ignore aria-hidden="true">
+        <img id="page-boot-image" alt="" />
+      </div>
+      <script>
+        try {
+          const bootImage = document.getElementById('page-boot-image');
+          const savedBoot = sessionStorage.getItem('halftone:boot');
+          if (bootImage && savedBoot) bootImage.src = savedBoot;
+        } catch {}
+      </script>
       <header class="site-header">
         <nav class="site-nav" aria-label="Pages">
-          <a href="#index" data-nav="index">Index</a>
-          <a href="#studio" data-nav="studio">Coalition</a>
+          <a href="./" data-page-transition aria-current="page">Index</a>
+          <a href="./coalition.html" data-page-transition>Coalition</a>
         </nav>
       </header>
 
-      <main class="view view-effects" data-view="index">
+      <main class="view view-effects">
         <div class="effect-rows">
-          <section class="effect-row" aria-label="Single gradient map">
-            <div class="effect-row-head">
-              <span>01 — Single gradient map</span>
-              <span>Default, no hover</span>
-            </div>
+          <div class="effect-row">
             <div class="effect-grid">
-              <figure class="fx-tile" style="--tile: #cad48a">
+              <figure class="fx-tile" style="--tile: #ccd391">
                 <div class="fx-frame">
                   <img
                     data-photo="e"
-                    data-fx="single-green"
-                    alt="Portrait with a green and olive single-layer halftone"
+                    data-fx="single-default"
+                    alt="Portrait with the default green and olive halftone"
                   />
                 </div>
-                <figcaption>Green / Olive</figcaption>
-              </figure>
-              <figure class="fx-tile" style="--tile: #f26b4e">
-                <div class="fx-frame">
-                  <img
-                    data-photo="e"
-                    data-fx="single-orange"
-                    alt="Portrait with an orange and salmon single-layer halftone"
-                  />
-                </div>
-                <figcaption>Orange / Salmon</figcaption>
-              </figure>
-              <figure class="fx-tile" style="--tile: #a8d8d8">
-                <div class="fx-frame">
-                  <img
-                    data-photo="e"
-                    data-fx="single-teal"
-                    alt="Portrait with a teal and ice single-layer halftone"
-                  />
-                </div>
-                <figcaption>Teal / Ice</figcaption>
-              </figure>
-            </div>
-          </section>
-
-          <section class="effect-row" aria-label="Two multiplied layers">
-            <div class="effect-row-head">
-              <span>02 — Two multiplied layers</span>
-              <span>Default · hover shifts the top layer</span>
-            </div>
-            <div class="effect-grid">
-              <figure class="fx-tile fx-two">
-                <div class="fx-frame">
-                  <img
-                    data-photo="e"
-                    data-fx="two-orange-green"
-                    alt="Portrait with orange and green multiplied halftone layers"
-                  />
-                </div>
-                <figcaption>Orange × Green</figcaption>
               </figure>
               <figure class="fx-tile fx-two">
                 <div class="fx-frame">
                   <img
                     data-photo="e"
-                    data-fx="two-magenta-teal"
-                    alt="Portrait with magenta and teal multiplied halftone layers"
+                    data-fx="two-hover"
+                    alt="Two multiplied halftone layers; hover shifts the top layer"
                   />
                 </div>
-                <figcaption>Magenta × Teal</figcaption>
-              </figure>
-              <figure class="fx-tile fx-two">
-                <div class="fx-frame">
-                  <img
-                    data-photo="e"
-                    data-fx="two-blue-gold"
-                    alt="Portrait with blue and gold multiplied halftone layers"
-                  />
-                </div>
-                <figcaption>Blue × Gold</figcaption>
               </figure>
             </div>
-          </section>
-        </div>
-      </main>
-
-      <main class="view view-human" data-view="studio" hidden>
-        <img
-          class="hf-bg"
-          data-photo="a"
-          alt="Dandelion field behind the Human First Creatives Coalition page"
-        />
-        <div class="hf-overlay" aria-hidden="true"></div>
-        <div class="hf-content">
-          <div class="hf-copy">
-            <a class="hf-logo" href="#index" data-nav="index"
-              >Human First Creatives Coalition</a
-            >
-            <h1 tabindex="-1">
-              Our economy.<br />Our work.<br />Our tech.<br /><span
-                class="hf-highlight"
-                >Our choice.</span
-              >
-            </h1>
-            <a class="hf-privacy" href="#privacy">Privacy Policy</a>
           </div>
-          <aside class="hf-panel" aria-label="Join the coalition">
-            <p class="hf-lede">
-              We’re building a coalition of studios, agencies, and creative
-              professionals who refuse to adopt AI on Big Tech’s terms.
-            </p>
-            <p class="hf-body">
-              We’re just getting started. If you’re interested in joining or
-              getting more info, sign up to our mailing list.
-            </p>
-            <form class="hf-form" novalidate>
-              <label class="sr-only" for="hf-email">Your email</label>
-              <input
-                id="hf-email"
-                name="email"
-                type="email"
-                placeholder="Your email"
-                autocomplete="email"
-              />
-              <button type="submit" aria-label="Sign up">→</button>
-            </form>
-            <p class="hf-error">Please enter a valid email</p>
-            <p class="hf-body hf-body-tight">
-              If you’re looking for more information about our movement, reach
-              out. A human will respond.
-            </p>
-            <div class="hf-email">
-              <span>hello@humanfirst.com</span>
-              <button
-                type="button"
-                data-copy="hello@humanfirst.com"
-                aria-label="Copy email address"
-              >
-                ⧉
-              </button>
-            </div>
-            <div class="hf-foot">
-              <p class="hf-small">Who’s behind the coalition</p>
-              <p class="hf-body">
-                The Human First Creatives Coalition was started by team members
-                at design &amp; tech studio Outside. We got the idea based on
-                responses to our restrictive AI Policy.
-              </p>
-            </div>
-          </aside>
         </div>
       </main>
 

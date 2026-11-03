@@ -1,8 +1,8 @@
 :root {
-  --bg: #cad48a;
-  --ink: #171a10;
-  --muted: #4d5330;
-  --line: #a4b06a;
+  --bg: #ffffff;
+  --ink: #111111;
+  --muted: #666666;
+  --line: #dddddd;
   --accent: #9c3410;
   color-scheme: light;
   font-family: 'Brut Grotesque', 'Helvetica Neue', Arial, sans-serif;
@@ -76,10 +76,6 @@ body {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: clamp(12px, 2.2vh, 28px);
-}
-
-.view[hidden] {
-  display: none;
 }
 
 .intro {
@@ -199,56 +195,28 @@ body {
 }
 
 .effect-row {
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 6px;
-}
-
-.effect-row-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  border-top: 1px solid var(--line);
-  padding-top: 6px;
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  display: block;
 }
 
 .effect-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(6px, 0.9vw, 14px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.4vw, 18px);
+  width: min(100%, 920px);
+  margin-inline: auto;
 }
 
 .fx-tile {
   margin: 0;
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 5px;
+  display: block;
 }
 
 .fx-frame {
   position: relative;
   overflow: hidden;
   background: var(--tile, transparent);
-  padding: clamp(46px, 7.8vh, 70px) clamp(32px, 3.7vw, 53px);
+  padding: clamp(16px, 1.9vh, 18px) clamp(18px, 1.5vw, 24px);
   aspect-ratio: 447 / 566;
-}
-
-.effect-row:first-child .effect-grid {
-  gap: 6px;
-}
-
-.effect-row:last-child .effect-grid {
-  width: 100%;
-  max-width: 1050px;
-  justify-self: center;
-}
-
-.effect-row:last-child .fx-frame {
-  aspect-ratio: 0.8;
 }
 
 .fx-frame img {
@@ -258,16 +226,6 @@ body {
   object-fit: cover;
 }
 
-.fx-tile figcaption {
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.fx-two .fx-frame {
-  padding: 0;
-}
 
 
 .view-human {
@@ -278,12 +236,12 @@ body {
   overflow: hidden;
 }
 
-body.is-coalition #app {
+body[data-page='coalition'] #app {
   padding: 0;
   gap: 0;
 }
 
-body.is-coalition .site-header {
+body[data-page='coalition'] .site-header {
   display: none;
 }
 
@@ -504,12 +462,22 @@ body.is-coalition .site-header {
   }
 }
 
-.halftone-pin {
-  position: absolute;
-  z-index: 3;
+
+.page-boot {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--bg);
+}
+
+.halftone-booting .page-boot {
   display: block;
-  pointer-events: none;
-  user-select: none;
-  object-fit: fill;
-  will-change: transform;
+}
+
+.page-boot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
