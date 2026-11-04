@@ -11,6 +11,9 @@ const sketches = readdirSync(resolve(root, 'folder'), { withFileTypes: true })
   .filter((name) => existsSync(resolve(root, 'folder', name, 'index.html')))
   .sort()
 
+// Extra real pages inside a sketch folder
+const extraPages = ['halftone-effect/coalition.html']
+
 export default defineConfig({
   base: '/Creative-Coding/',
   define: {
@@ -23,6 +26,12 @@ export default defineConfig({
         main: resolve(root, 'index.html'),
         ...Object.fromEntries(
           sketches.map((name) => [name, resolve(root, 'folder', name, 'index.html')]),
+        ),
+        ...Object.fromEntries(
+          extraPages.map((file) => [
+            file.replace(/[\\/]/g, '-').replace(/\.html$/, ''),
+            resolve(root, 'folder', file),
+          ]),
         ),
       },
     },

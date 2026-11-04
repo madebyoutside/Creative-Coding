@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Halftone — Coalition</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="./demo.css" />
+    <script>
+      try {
+        if (sessionStorage.getItem('halftone:page')) {
+          document.documentElement.classList.add('halftone-booting');
+        }
+      } catch {}
+    </script>
+  </head>
+  <body data-page="coalition">
+    <div id="app">
+      <div class="page-boot" data-halftone-ignore aria-hidden="true">
+        <img id="page-boot-image" alt="" />
+      </div>
+      <script>
+        try {
+          const bootImage = document.getElementById('page-boot-image');
+          const savedBoot = sessionStorage.getItem('halftone:boot');
+          if (bootImage && savedBoot) bootImage.src = savedBoot;
+        } catch {}
+      </script>
+      <main class="view view-human">
+        <img
+          class="hf-bg"
+          data-photo="a"
+          alt="Dandelion field behind the Human First Creatives Coalition page"
+        />
+        <div class="hf-overlay" aria-hidden="true"></div>
+        <div class="hf-content">
+          <div class="hf-copy">
+            <a class="hf-logo" href="./" data-page-transition
+              >Human First Creatives Coalition</a
+            >
+            <h1 tabindex="-1">
+              Our economy.<br />Our work.<br />Our tech.<br /><span
+                class="hf-highlight"
+                >Our choice.</span
+              >
+            </h1>
+            <a class="hf-privacy" href="#privacy">Privacy Policy</a>
+          </div>
+          <aside class="hf-panel" aria-label="Join the coalition">
+            <p class="hf-lede">
+              We’re building a coalition of studios, agencies, and creative
+              professionals who refuse to adopt AI on Big Tech’s terms.
+            </p>
+            <p class="hf-body">
+              We’re just getting started. If you’re interested in joining or
+              getting more info, sign up to our mailing list.
+            </p>
+            <form class="hf-form" novalidate>
+              <label class="sr-only" for="hf-email">Your email</label>
+              <input
+                id="hf-email"
+                name="email"
+                type="email"
+                placeholder="Your email"
+                autocomplete="email"
+              />
+              <button type="submit" aria-label="Sign up">→</button>
+            </form>
+            <p class="hf-error">Please enter a valid email</p>
+            <p class="hf-body hf-body-tight">
+              If you’re looking for more information about our movement, reach
+              out. A human will respond.
+            </p>
+            <div class="hf-email">
+              <span>hello@humanfirst.com</span>
+              <button
+                type="button"
+                data-copy="hello@humanfirst.com"
+                aria-label="Copy email address"
+              >
+                ⧉
+              </button>
+            </div>
+            <div class="hf-foot">
+              <p class="hf-small">Who’s behind the coalition</p>
+              <p class="hf-body">
+                The Human First Creatives Coalition was started by team members
+                at design &amp; tech studio Outside. We got the idea based on
+                responses to our restrictive AI Policy.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </main>
+
+      <p class="notice" id="notice" data-halftone-ignore hidden>
+        This effect needs a browser with WebGPU or WebGL2. Everything else keeps
+        working.
+      </p>
+    </div>
+
+    <script type="module" src="./demo.js"></script>
+  </body>
+</html>

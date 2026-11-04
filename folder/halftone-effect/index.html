@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Halftone</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="./demo.css" />
+    <script>
+      try {
+        if (sessionStorage.getItem('halftone:page')) {
+          document.documentElement.classList.add('halftone-booting');
+        }
+      } catch {}
+    </script>
+  </head>
+  <body data-page="index">
+    <div id="app">
+      <div class="page-boot" data-halftone-ignore aria-hidden="true">
+        <img id="page-boot-image" alt="" />
+      </div>
+      <script>
+        try {
+          const bootImage = document.getElementById('page-boot-image');
+          const savedBoot = sessionStorage.getItem('halftone:boot');
+          if (bootImage && savedBoot) bootImage.src = savedBoot;
+        } catch {}
+      </script>
+      <header class="site-header">
+        <nav class="site-nav" aria-label="Pages">
+          <a href="./" data-page-transition aria-current="page">Index</a>
+          <a href="./coalition.html" data-page-transition>Coalition</a>
+        </nav>
+      </header>
+
+      <main class="view view-effects">
+        <div class="stage-shell">
+        <div class="effect-rows">
+          <div class="effect-row">
+            <div class="effect-grid">
+              <figure class="fx-tile" style="--tile: #ccd391">
+                <div class="fx-frame">
+                  <img
+                    data-photo="e"
+                    data-fx="single-default"
+                    alt="Portrait with the default green and olive halftone"
+                  />
+                </div>
+              </figure>
+              <figure class="fx-tile fx-two">
+                <div class="fx-frame">
+                  <img
+                    data-photo="e"
+                    data-fx="two-hover"
+                    alt="Two multiplied halftone layers; hover shifts the top layer"
+                  />
+                </div>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <aside class="controls" id="controls" aria-label="First image controls"></aside>
+        </div>
+      </main>
+
+      <p class="notice" id="notice" data-halftone-ignore hidden>
+        This effect needs a browser with WebGPU or WebGL2. Everything else keeps
+        working.
+      </p>
+    </div>
+
+    <script type="module" src="./demo.js"></script>
+  </body>
+</html>
