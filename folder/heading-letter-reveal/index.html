@@ -4,16 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Heading Letter Reveal</title>
+  <link rel="stylesheet" href="../effects-on-text-no-canvas/text-effect.css">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <img class="hero" src="/src/assets/animation-cross-fade-melt-effect/photo-1.webp" alt="">
 
   <p class="label">Test -1 · letters from left to right</p>
-  <h1 class="heading letter-reveal" data-stagger="0.05" data-delay="0.3" data-duration="0.3" data-order="text">UNO SPAZIO CHE SI TRASFORMA PER OGNI DISCIPLINA SPORTIVA</h1>
+  <h1 class="heading letter-reveal" data-stagger="0.05" data-delay="0.3" data-duration="0.3" data-tilt="2" data-trigger="viewport" data-effect="none" data-order="text">UNO SPAZIO CHE SI TRASFORMA PER OGNI DISCIPLINA SPORTIVA</h1>
 
   <p class="label">Test -2 · words in random order</p>
-  <h2 class="heading word-reveal" data-word-delay="0.15" data-stagger="0.04" data-delay="0.3" data-duration="0.3" data-letters="wipe" data-effect="clip">If we lose our power what leverage do we have left?</h2>
+  <h2 class="heading word-reveal" data-word-delay="0.15" data-stagger="0.04" data-delay="0.3" data-duration="0.3" data-tilt="2" data-trigger="viewport" data-letters="wipe" data-animation="clip" data-effect="none">If we lose our power what leverage do we have left?</h2>
 
   <details class="panel" open data-lenis-prevent>
     <summary>Settings</summary>
@@ -23,6 +24,13 @@
       <label><span>Gap between each (s)</span><input type="range" name="stagger" min="0" max="0.3" step="0.01" value="0.05"><output>0.05</output></label>
       <label><span>Start delay (s)</span><input type="range" name="delay" min="0" max="2" step="0.1" value="0.3"><output>0.3</output></label>
       <label><span>Time to appear (s)</span><input type="range" name="duration" min="0" max="1" step="0.05" value="0.3"><output>0.3</output></label>
+      <label><span>Tilt (deg)</span><input type="range" name="tilt" min="0" max="30" step="1" value="2"><output>2</output></label>
+      <label><span>Trigger</span>
+        <select name="trigger">
+          <option value="viewport">When in view</option>
+          <option value="scroll">With scroll</option>
+        </select><span></span>
+      </label>
       <label><span>Order</span>
         <select name="order">
           <option value="text">One letter at a time</option>
@@ -30,8 +38,18 @@
           <option value="lines">All lines at once</option>
         </select><span></span>
       </label>
+      <label><span>Spacing effect</span>
+        <select name="effect">
+          <option value="none">None</option>
+          <option value="random-spacing">Random letter spacing</option>
+          <option value="random-layout">Random spacing + line height</option>
+          <option value="hover-gap">Hover to space letters</option>
+          <option value="hover-spread">Hover to space all letters</option>
+        </select><span></span>
+      </label>
       <div class="buttons">
         <button type="reset">Reset</button>
+        <button type="button" class="shuffle">Shuffle</button>
         <button type="button" class="replay">Replay</button>
       </div>
     </form>
@@ -43,20 +61,37 @@
       <label><span>Gap between letters (s)</span><input type="range" name="stagger" min="0" max="0.2" step="0.01" value="0.04"><output>0.04</output></label>
       <label><span>Start delay (s)</span><input type="range" name="delay" min="0" max="2" step="0.1" value="0.3"><output>0.3</output></label>
       <label><span>Time to appear (s)</span><input type="range" name="duration" min="0" max="1" step="0.05" value="0.3"><output>0.3</output></label>
+      <label><span>Tilt (deg)</span><input type="range" name="tilt" min="0" max="30" step="1" value="2"><output>2</output></label>
+      <label><span>Trigger</span>
+        <select name="trigger">
+          <option value="viewport">When in view</option>
+          <option value="scroll">With scroll</option>
+        </select><span></span>
+      </label>
       <label><span>Each word</span>
         <select name="letters">
           <option value="wipe">Letter by letter</option>
           <option value="word">Whole word</option>
         </select><span></span>
       </label>
-      <label><span>Effect</span>
-        <select name="effect">
+      <label><span>Animation</span>
+        <select name="animation">
           <option value="clip">Clip-path wipe</option>
           <option value="fade">Opacity fade</option>
         </select><span></span>
       </label>
+      <label><span>Spacing effect</span>
+        <select name="effect">
+          <option value="none">None</option>
+          <option value="random-spacing">Random letter spacing</option>
+          <option value="random-layout">Random spacing + line height</option>
+          <option value="hover-gap">Hover to space letters</option>
+          <option value="hover-spread">Hover to space all letters</option>
+        </select><span></span>
+      </label>
       <div class="buttons">
         <button type="reset">Reset</button>
+        <button type="button" class="shuffle">Shuffle</button>
         <button type="button" class="replay">Replay</button>
       </div>
     </form>
