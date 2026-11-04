@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Halftone Overprint</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Halftone Overprint</h1>
+    <div class="angles" aria-label="Screen angles">
+      <span><i class="sw-c"></i>C 15°</span>
+      <span><i class="sw-m"></i>M 75°</span>
+      <span><i class="sw-y"></i>Y 0°</span>
+      <span><i class="sw-k"></i>K 45°</span>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="stage" id="stage">
+      <!-- Layer 1: the image. Layer 2: the halftone canvas, blended with CSS mix-blend-mode -->
+      <div class="art" id="art">
+        <img id="base" alt="Image layer">
+        <canvas id="pattern" aria-label="Halftone pattern layer"></canvas>
+      </div>
+      <div class="stage-note" id="dims">sample image · drop a photo here</div>
+    </div>
+
+    <aside class="panel">
+      <div class="sec">
+        <h2>Image layer</h2>
+        <div class="btns">
+          <button class="btn primary" id="pick">Choose image</button>
+          <input type="file" id="file" accept="image/*">
+          <button class="btn" id="sample">Use sample</button>
+        </div>
+        <div class="row two"><label for="layerW">Layer width</label>
+          <input type="number" id="layerW" min="50" max="2000" step="1" value="399"></div>
+        <div class="row two"><span class="lbl">Pattern on</span>
+          <div class="seg" role="group" aria-label="Pattern on">
+            <button id="v-color" aria-pressed="true">Colour</button>
+            <button id="v-img" aria-pressed="false">Image</button>
+            <button id="v-orig" aria-pressed="false">Original</button>
+          </div></div>
+        <div class="row two"><label for="paper">Colour</label>
+          <input type="color" id="paper" value="#ccd391"></div>
+        <div class="row two"><label for="blend">Blend</label>
+          <select id="blend">
+            <option value="multiply" selected>Multiply</option>
+            <option value="darken">Darken</option>
+            <option value="overlay">Overlay</option>
+            <option value="screen">Screen</option>
+            <option value="normal">Normal</option>
+          </select></div>
+        <div class="row"><label for="opacity">Opacity</label><input type="range" id="opacity" min="0" max="1" step="0.01" value="1"><span class="val" id="opacity-v">100%</span></div>
+      </div>
+
+      <div class="sec">
+        <h2>Halftone</h2>
+        <div class="row two"><label for="halftoneType">Pattern</label>
+          <select id="halftoneType"><option value="0">Dot</option><option value="1">Blended</option></select></div>
+        <div class="row two"><label for="colorMode">Color mode</label>
+          <select id="colorMode"><option value="0">CMYK</option><option value="1">RGB</option><option value="2">BW light</option><option value="3">BW dark</option></select></div>
+        <div class="row"><label for="dotSize">Dot size</label><input type="range" id="dotSize" min="4" max="120" step="0.5"><span class="val" id="dotSize-v"></span></div>
+        <div class="row"><label for="dotScale">Dot scale</label><input type="range" id="dotScale" min="0" max="2" step="0.01"><span class="val" id="dotScale-v"></span></div>
+        <div class="row"><label for="softness">Softness</label><input type="range" id="softness" min="0" max="1" step="0.01"><span class="val" id="softness-v"></span></div>
+        <div class="row"><label for="rotation">Rotation</label><input type="range" id="rotation" min="-180" max="180" step="0.5"><span class="val" id="rotation-v"></span></div>
+        <div class="row"><label for="centerX">Center X</label><input type="range" id="centerX" min="0" max="100" step="1"><span class="val" id="centerX-v"></span></div>
+        <div class="row"><label for="centerY">Center Y</label><input type="range" id="centerY" min="0" max="100" step="1"><span class="val" id="centerY-v"></span></div>
+        <label class="switch"><input type="checkbox" id="clipToAlpha"> Clip to alpha</label>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head">
+          <h2>Gradient map</h2>
+          <label class="switch"><input type="checkbox" id="gm-on" checked> On</label>
+        </div>
+        <div class="gm-bar" id="gm-bar" aria-hidden="true"></div>
+        <div class="stops" id="gm-stops"></div>
+        <div class="btns">
+          <button class="btn" id="gm-add">Add stop</button>
+          <button class="btn" id="gm-flip">Reverse</button>
+        </div>
+        <div class="row two"><label for="gm-order">Apply</label>
+          <select id="gm-order"><option value="after">After halftone</option><option value="before">Before halftone</option></select></div>
+        <div class="row"><label for="gm-scatter">Scatter</label><input type="range" id="gm-scatter" min="0" max="100" step="0.1" value="0"><span class="val" id="gm-scatter-v">0%</span></div>
+        <div class="row"><label for="gm-offset">Offset</label><input type="range" id="gm-offset" min="-100" max="100" step="0.1" value="0"><span class="val" id="gm-offset-v">0%</span></div>
+        <div class="row two"><label for="gm-repeat">Repeat</label>
+          <select id="gm-repeat"><option value="none">None</option><option value="repeat">Repeat</option><option value="mirror">Mirror</option></select></div>
+        <div class="row"><label for="gm-freq">Frequency</label><input type="range" id="gm-freq" min="1" max="10" step="1" value="2"><span class="val" id="gm-freq-v">2</span></div>
+        <div class="row two"><label for="gm-mix">Mix space</label>
+          <select id="gm-mix"><option>sRGB</option><option>Linear</option><option>OKLab</option></select></div>
+        <div class="btns"><button class="btn" id="gm-css">Copy as CSS filter</button></div>
+        <textarea id="gm-css-out" rows="8" readonly hidden aria-label="Gradient map CSS"></textarea>
+      </div>
+
+      <div class="sec">
+        <h2>Presets</h2>
+        <div class="btns">
+          <button class="btn" id="p-default">Defaults</button>
+          <button class="btn" id="p-shot">Your screenshot</button>
+          <button class="btn" id="p-comic">Comic BW</button>
+        </div>
+        <!--EXPORT-->
+        <div class="btns"><button class="btn primary" id="download">Download PNG</button></div>
+        <!--/EXPORT-->
+        <div id="toast" role="status"></div>
+        <p class="hint">Dot size is in layer units, like Figma: set Layer width to your Figma frame width. The pattern renders at 2× for crisp dots.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+<script type="module" src="./script.js"></script>
+</body>
+</html>

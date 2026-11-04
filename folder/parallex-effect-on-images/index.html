@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Parallax on Images</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <section class="intro">
+    <h1>Parallax on images</h1>
+    <p>Scroll down.</p>
+  </section>
+
+  <section class="scene">
+    <div class="stage">
+      <div class="art">
+        <img class="layer layer-1" src="./images/layer-1.png" alt="">
+        <img class="layer layer-2" src="./images/layer-2.png" alt="">
+        <img class="layer layer-3" src="./images/layer-3.png" alt="">
+      </div>
+    </div>
+  </section>
+
+  <section class="outro">
+    <p>Scroll up.</p>
+  </section>
+
+  <details class="panel" open>
+    <summary>Parameters</summary>
+    <form class="controls">
+      <label><span>Smoothness</span><input type="range" name="lerp" min="0.02" max="0.3" step="0.01" value="0.1"><output>0.1</output></label>
+      <fieldset>
+        <legend>Layer 1 · flag</legend>
+        <label><span>Y travel (vh)</span><input type="range" data-target=".layer-1" name="--y" min="-80" max="80" step="1" value="8"><output>8</output></label>
+        <label><span>X drift (vw)</span><input type="range" data-target=".layer-1" name="--x" min="-50" max="50" step="1" value="0"><output>0</output></label>
+        <label><span>Rotate (°)</span><input type="range" data-target=".layer-1" name="--r" min="-90" max="90" step="1" value="0"><output>0</output></label>
+        <label><span>Scale</span><input type="range" data-target=".layer-1" name="--s" min="-0.5" max="0.5" step="0.05" value="0"><output>0</output></label>
+      </fieldset>
+      <fieldset>
+        <legend>Layer 2 · stroke</legend>
+        <label><span>Y travel (vh)</span><input type="range" data-target=".layer-2" name="--y" min="-80" max="80" step="1" value="28"><output>28</output></label>
+        <label><span>X drift (vw)</span><input type="range" data-target=".layer-2" name="--x" min="-50" max="50" step="1" value="0"><output>0</output></label>
+        <label><span>Rotate (°)</span><input type="range" data-target=".layer-2" name="--r" min="-90" max="90" step="1" value="8"><output>8</output></label>
+        <label><span>Scale</span><input type="range" data-target=".layer-2" name="--s" min="-0.5" max="0.5" step="0.05" value="0"><output>0</output></label>
+      </fieldset>
+      <fieldset>
+        <legend>Layer 3 · circle</legend>
+        <label><span>Y travel (vh)</span><input type="range" data-target=".layer-3" name="--y" min="-80" max="80" step="1" value="55"><output>55</output></label>
+        <label><span>X drift (vw)</span><input type="range" data-target=".layer-3" name="--x" min="-50" max="50" step="1" value="0"><output>0</output></label>
+        <label><span>Rotate (°)</span><input type="range" data-target=".layer-3" name="--r" min="-90" max="90" step="1" value="0"><output>0</output></label>
+        <label><span>Scale</span><input type="range" data-target=".layer-3" name="--s" min="-0.5" max="0.5" step="0.05" value="0"><output>0</output></label>
+        <label><span>Blend</span>
+          <select data-target=".layer-3" name="--blend">
+            <option value="hard-light">Hard Light</option>
+            <option value="multiply">Multiply</option>
+          </select><span></span>
+        </label>
+      </fieldset>
+      <div class="buttons"><button type="reset">Reset</button></div>
+    </form>
+  </details>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
