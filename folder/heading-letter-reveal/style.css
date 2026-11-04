@@ -53,9 +53,11 @@ body {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  width: min(320px, calc(100vw - 32px));
+  width: min(400px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
-  overflow: auto;
+  overflow-x: hidden; /* never scroll sideways */
+  overflow-y: auto;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   border-radius: 10px;
@@ -88,7 +90,7 @@ body {
 
 .controls label {
   display: grid;
-  grid-template-columns: 100px 1fr 36px;
+  grid-template-columns: 120px minmax(0, 1fr) 36px; /* minmax lets the middle column shrink instead of overflowing */
   align-items: center;
   gap: 8px;
 }
@@ -114,6 +116,13 @@ body {
 
 .controls textarea, .controls button, .controls select {
   font: inherit;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* fill the panel instead of using their own default widths */
+.controls textarea, .controls select {
+  width: 100%;
 }
 
 .controls textarea { resize: vertical; }

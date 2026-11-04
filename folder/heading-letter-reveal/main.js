@@ -1,11 +1,14 @@
 import Lenis from 'lenis';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import 'lenis/dist/lenis.css';
+import { shuffle, breakLines } from '../effects-on-text-no-canvas/text-effect.js';
 import { play as playLetters } from './letter-reveal.js';
 import { play as playWords } from './word-reveal.js';
 
-new Lenis({
+const lenis = new Lenis({
   autoRaf: true,
 });
+lenis.on('scroll', ScrollTrigger.update); // keep scroll-based reveals in step with Lenis' smooth scrolling
 
 function connect(form, heading, play) {
   function update() {
@@ -31,6 +34,16 @@ function connect(form, heading, play) {
 
   form.querySelector('.replay').addEventListener('click', () => 
     play(heading)
+  );
+
+  // new random gaps (and indents / line heights) without replaying the reveal
+  form.querySelector('.shuffle').addEventListener('click', () => 
+    shuffle(heading)
+  );
+
+  // re-break the lines for the new width, keeping the room the spacing effect needs
+  window.addEventListener('resize', () => 
+    breakLines(heading)
   );
 }
 
