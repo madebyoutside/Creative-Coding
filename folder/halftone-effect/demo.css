@@ -173,11 +173,33 @@ body {
 }
 
 .view-effects {
-  grid-template-rows: auto auto;
-  align-content: start;
+  display: block;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
+}
+
+/* The main column is tall because it contains the scroll-reveal image;
+   the tall grid row is what lets the panel stay sticky while scrolling. */
+.demo-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 920px) minmax(280px, 330px);
+  gap: clamp(18px, 2vw, 32px);
+  justify-content: center;
+  align-items: start;
+  width: 100%;
+}
+
+.demo-main {
+  display: grid;
+  gap: clamp(26px, 4.5vh, 54px);
+  min-width: 0;
+}
+
+.effect-rows {
+  width: 100%;
+  max-width: 920px;
+  justify-self: center;
 }
 
 .view-effects .intro h1 {
@@ -189,12 +211,8 @@ body {
 }
 
 .effect-rows {
-  width: 100%;
-  max-width: 1353px;
-  justify-self: center;
   display: grid;
   grid-template-rows: auto auto;
-  gap: clamp(26px, 4.5vh, 54px);
 }
 
 .effect-row {
@@ -486,25 +504,14 @@ html[aria-busy="true"] a {
   display: block;
 }
 
+
+
 /* First-image control panel (neutral, not the reference panel design) */
-.stage-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 920px) minmax(280px, 330px);
-  gap: clamp(18px, 2vw, 32px);
-  justify-content: center;
-  align-items: start;
-  width: 100%;
-}
-
-.stage-shell .effect-rows {
-  width: 100%;
-  max-width: none;
-}
-
-.controls {
+.demo-layout > .controls {
   position: sticky;
   top: 10px;
-  max-height: calc(100dvh - 130px);
+  align-self: start;
+  max-height: calc(100dvh - 108px);
   overflow: auto;
   padding: 14px;
   border: 1px solid var(--line);
@@ -676,16 +683,46 @@ html[aria-busy="true"] a {
   margin: 6px 0 8px;
 }
 
+.scroll-reveal {
+  width: min(100%, 447px);
+  margin: clamp(420px, 60vh, 760px) auto clamp(80px, 12vh, 160px);
+}
+
+.scroll-reveal-frame {
+  width: 100%;
+  aspect-ratio: 447 / 566;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.scroll-reveal img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 @media (max-width: 1050px) {
-  .stage-shell {
+  .demo-layout {
     grid-template-columns: minmax(0, 1fr);
     max-width: 620px;
     margin-inline: auto;
   }
 
-  .controls {
+  .demo-layout > .controls {
     position: static;
     max-height: none;
     order: 2;
   }
+
+  .scroll-reveal {
+    margin-top: clamp(260px, 42vh, 520px);
+  }
+}
+
+.ctl-hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
 }

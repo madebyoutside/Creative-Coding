@@ -84,6 +84,21 @@ export function setupControls(api, first) {
       <label class="ctl-row" for="c-width"><span>Layer width</span><input id="c-width" type="number" min="100" max="1200" step="1" value="${halftone.designWidth}"></label>
     </section>
 
+
+    <section class="ctl-group">
+      <h3>Page transition</h3>
+      ${range("c-transition-speed", "Speed", 0.5, 2, 0.1, api.transitionSpeed ?? 1, "×")}
+      <p class="ctl-hint">Higher is faster. Applies to both pages.</p>
+    </section>
+
+    <section class="ctl-group">
+      <h3>Scroll image</h3>
+      ${select("c-scroll-once", "Fade", [["once", "Once"], ["every", "Every time"]], api.scrollRevealOnce ? "once" : "every")}
+      ${range("c-scroll-hold", "Hold after visible", 0, 10, 0.1, api.scrollRevealHold ?? 3, "s")}
+      ${range("c-scroll-fade", "Fade time", 0.1, 8, 0.1, api.scrollRevealFade ?? 1.8, "s")}
+      <p class="ctl-hint">The pattern waits until the image is fully in view.</p>
+    </section>
+
     <section class="ctl-group">
       <h3>Halftone</h3>
       ${select("c-type", "Pattern", [["0", "Dot"], ["1", "Blended"]], halftone.halftoneType)}
@@ -153,6 +168,12 @@ export function setupControls(api, first) {
   bindRange("c-scatter", "%", (v) => { gradient.scatter = v; applyGradient(); });
   bindRange("c-offset", "%", (v) => { gradient.offset = v; applyGradient(); });
   bindRange("c-frequency", "", (v) => { gradient.frequency = v; applyGradient(); });
+  bindRange("c-transition-speed", "×", (v) => { api.setTransitionSpeed(v); });
+  bindRange("c-scroll-hold", "s", (v) => { api.setScrollRevealTiming({ hold: v }); });
+  bindRange("c-scroll-fade", "s", (v) => { api.setScrollRevealTiming({ fade: v }); });
+  $("c-scroll-once").addEventListener("change", () => {
+    api.setScrollRevealTiming({ once: $("c-scroll-once").value === "once" });
+  });
 
   const renderStops = () => {
     const box = $("c-stops");

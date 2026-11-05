@@ -8,6 +8,9 @@ const photos = { a: photo2, e: photo5 };
 
 let halftone = null;
 let swup = null;
+let scrollRevealCleanup = null;
+let scrollRevealRefresh = null;
+const scrollRevealTiming = { hold: 3000, fade: 1800, once: true };
 
 const debug = {
   ready: false,
@@ -68,10 +71,30 @@ const SECOND = {
   hoverOffset: [18, 18],
 };
 
+// Same treatment as the first image, but the original stays visible so the
+// pattern can fade away cleanly. Gradient is the #82C1C0 -> #FFFFFF pair.
+const SCROLL = {
+  pattern: { ...FIRST.pattern, on: "color", paper: "#FFFFFF" },
+  layers: [
+    {
+      ...FIRST.layers[0],
+      gradient: {
+        ...FIRST.layers[0].gradient,
+        enabled: true,
+        stops: [
+          { position: 0, color: "#82C1C0" },
+          { position: 1, color: "#FFFFFF" },
+        ],
+      },
+    },
+  ],
+};
+
 // Maps data-fx attributes in index.html to the objects above.
 const PINS = {
   "single-default": FIRST,
   "two-hover": SECOND,
+  "scroll-reveal": SCROLL,
 };
 
 const ROW_IMAGES = {
@@ -105,6 +128,147 @@ async function setupPins() {
   }
   await Promise.all(jobs);
   halftone.sync();
+}
+
+/** Hold the pattern while the image arrives, then fade it after a pause. */
+function setupScrollReveal() {
+  scrollRevealCleanup?.();
+  scrollRevealCleanup = null;
+  scrollRevealRefresh = null;
+
+  const img = document.querySelector('img[data-fx="scroll-reveal"]');
+  if (!img || !halftone?.supported) return;
+
+  const scrollRoot = img.closest(".view-effects");
+  const setScrollReveal = (value) => {
+    const reveal = Math.max(0, Math.min(1, value));
+    halftone.setPinReveal(img, reveal);
+    if (reveal >= 0.999) {
+      img.style.visibility = "hidden";
+      img.style.opacity = "";
+    } else {
+      img.style.visibility = "visible";
+      img.style.opacity = String(1 - reveal);
+    }
+  };
+
+  let frame = 0;
+  let holdTimer = 0;
+  let fadeFrame = 0;
+  let fullyVisible = false;
+  let completed = false;
+
+  const clearHold = () => {
+    if (holdTimer) window.clearTimeout(holdTimer);
+    holdTimer = 0;
+  };
+
+  const clearFade = () => {
+    if (fadeFrame) cancelAnimationFrame(fadeFrame);
+    fadeFrame = 0;
+  };
+
+  const fadeOut = () => {
+    const start = performance.now();
+    const duration = Math.max(80, scrollRevealTiming.fade);
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = t * t * (3 - 2 * t);
+      setScrollReveal(1 - eased);
+      if (t < 1) {
+        fadeFrame = requestAnimationFrame(step);
+      } else {
+        fadeFrame = 0;
+        completed = true;
+      }
+    };
+    fadeFrame = requestAnimationFrame(step);
+  };
+
+  const startHold = () => {
+    clearHold();
+    holdTimer = window.setTimeout(() => {
+      holdTimer = 0;
+      fadeOut();
+    }, Math.max(0, scrollRevealTiming.hold));
+  };
+
+  const update = () => {
+    frame = 0;
+    // Keep pinned surfaces aligned with the inner .view-effects scroller.
+    halftone.sync();
+
+    const rect = img.getBoundingClientRect();
+    const vh = window.innerHeight || 1;
+    const isFull = rect.top >= 0 && rect.bottom <= vh && rect.width > 0;
+    const isOut = rect.bottom <= 0 || rect.top >= vh;
+
+    if (isFull) {
+      if (completed) {
+        // In "once" mode keep the original visible if the pin was rebuilt.
+        if (scrollRevealTiming.once) setScrollReveal(0);
+        fullyVisible = true;
+        return;
+      }
+      if (!fullyVisible) {
+        fullyVisible = true;
+        clearFade();
+        setScrollReveal(1);
+        startHold();
+      }
+      return;
+    }
+
+    if (isOut) {
+      fullyVisible = false;
+      clearHold();
+      clearFade();
+      if (scrollRevealTiming.once && completed) {
+        setScrollReveal(0);
+      } else {
+        // Every-time mode only rearms after the image is completely gone.
+        completed = false;
+        setScrollReveal(1);
+      }
+      return;
+    }
+
+    // Partially visible: don't reapply the halftone. Let any running fade
+    // finish; only a full exit rearms it in every-time mode.
+    fullyVisible = false;
+    clearHold();
+  };
+
+  const schedule = () => {
+    if (!frame) frame = requestAnimationFrame(update);
+  };
+
+  scrollRoot?.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", schedule);
+
+  update();
+
+  scrollRevealRefresh = () => {
+    fullyVisible = false;
+    completed = false;
+    clearHold();
+    clearFade();
+    halftone.setPinReveal(img, 1);
+    update();
+  };
+
+  scrollRevealCleanup = () => {
+    scrollRoot?.removeEventListener("scroll", schedule);
+    window.removeEventListener("scroll", schedule);
+    window.removeEventListener("resize", schedule);
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0;
+    clearHold();
+    clearFade();
+    fullyVisible = false;
+    scrollRevealRefresh = null;
+  };
 }
 
 function replaceConfig(target, next) {
@@ -196,6 +360,46 @@ window.__demo = {
     return halftone?.setParams(params) ?? null;
   },
 
+  get transitionSpeed() {
+    return halftone?.transitionSpeed ?? 1;
+  },
+
+  setTransitionSpeed(value) {
+    return halftone?.setTransitionSpeed?.(value) ?? value;
+  },
+
+  get scrollRevealHold() {
+    return scrollRevealTiming.hold / 1000;
+  },
+
+  get scrollRevealFade() {
+    return scrollRevealTiming.fade / 1000;
+  },
+
+  get scrollRevealOnce() {
+    return scrollRevealTiming.once;
+  },
+
+  setScrollRevealTiming(values = {}) {
+    if (values.once !== undefined) {
+      scrollRevealTiming.once = Boolean(values.once);
+    }
+    const hold = Number(values.hold);
+    const fade = Number(values.fade);
+    if (Number.isFinite(hold)) {
+      scrollRevealTiming.hold = Math.min(10, Math.max(0, hold)) * 1000;
+    }
+    if (Number.isFinite(fade)) {
+      scrollRevealTiming.fade = Math.min(8, Math.max(0.1, fade)) * 1000;
+    }
+    scrollRevealRefresh?.();
+    return {
+      hold: scrollRevealTiming.hold / 1000,
+      fade: scrollRevealTiming.fade / 1000,
+      once: scrollRevealTiming.once,
+    };
+  },
+
   async image(name, src) {
     const img = ROW_IMAGES[name];
     if (!img || !src) return null;
@@ -284,6 +488,8 @@ async function initPage() {
     setupControls(window.__demo, FIRST);
     await setupPins();
   }
+
+  setupScrollReveal();
 }
 
 /** Wire Swup with the halftone cross-page transition effect. */

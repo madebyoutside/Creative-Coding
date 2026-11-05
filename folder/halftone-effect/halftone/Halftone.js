@@ -132,6 +132,16 @@ export class Halftone {
     return this.hoverController?.prewarm();
   }
 
+/** Read the current page-transition speed multiplier. */
+  get transitionSpeed() {
+    return this.transitionController?.transitionSpeed ?? 1;
+  }
+
+/** Set the page-transition speed multiplier (higher is faster). */
+  setTransitionSpeed(value) {
+    return this.transitionController?.setSpeed(value) ?? 1;
+  }
+
 /** Update the base params and sync the active hover surface. */
   setParams(partial) {
     this.transitionController?.invalidateSnapshot();
@@ -157,6 +167,11 @@ export class Halftone {
     if (this.transitionController?.busy) return Promise.resolve(null);
     this.transitionController?.invalidateSnapshot();
     return this.pinController.update(element, options);
+  }
+
+/** Fade a pinned image between the full pattern (1) and the original (0). */
+  setPinReveal(element, value) {
+    return this.pinController?.setReveal(element, value) ?? false;
   }
 
 /** Read the live config for a pinned image. */
