@@ -462,6 +462,11 @@ body[data-page="coalition"] .site-header {
   }
 }
 
+html[aria-busy="true"],
+html[aria-busy="true"] a {
+  pointer-events: none;
+}
+
 .page-boot {
   display: none;
   position: fixed;

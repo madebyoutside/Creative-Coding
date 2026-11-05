@@ -270,14 +270,16 @@ pattern: {
 
 ## Page transition
 
-`[data-page-transition]` links are intercepted when the GPU is available:
+`[data-page-transition]` links are intercepted by **Swup** with the custom halftone effect:
 
-1. Capture the outgoing page to a data URL.
-2. Store it in IndexedDB and set the `halftone:page` session marker.
-3. Navigate to the real URL.
-4. The incoming page boots the stored snapshot, runs the outgoing teal treatment (1400 ms), crossfades the incoming olive treatment (1400 ms), resolves (300 ms), then reveals the real page and clears storage.
+1. Swup intercepts the navigation and loads the incoming page in the background (`visit:start`).
+2. Halftone snapshots the outgoing page, displays the outgoing teal treatment (1400 ms), and holds.
+3. Swup swaps the `#app` container, updates the URL/history, and initializes the incoming DOM and images.
+4. Halftone snapshots the incoming page and crossfades to the incoming olive treatment (1400 ms).
+5. Halftone resolves (700 ms) and reveals the live interactive page.
+6. The PixiJS/WebGPU context remains persistent across transitions without full page reloads.
 
-The same-page `transition(update, options)` API is still available for in-page view changes. The cross-document helpers live in `halftone/page-transition.js`; the boot markup is in both HTML pages and the inline head script prevents a raw-page flash.
+Browser back/forward history navigation is also animated seamlessly via `animateHistoryBrowsing: true`.
 
 ## API
 

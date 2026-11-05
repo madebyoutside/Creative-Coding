@@ -2,22 +2,12 @@ import photo2 from "/src/assets/halftone-effect/photo-2.jpg";
 import photo5 from "/src/assets/halftone-effect/photo-5.png";
 import fontUrl from "/src/assets/fonts/Brut_Grotesque-Medium.otf";
 import { createFirstConfig, setupControls } from "./controls.js";
-import {
-  clearPending,
-  decodeSnapshot,
-  finishBoot,
-  loadPending,
-  savePending,
-  setBootImage,
-  snapshotPage,
-} from "./halftone/page-transition.js";
+import Swup from "swup";
 
 const photos = { a: photo2, e: photo5 };
 
-const notice = document.querySelector("#notice");
-
 let halftone = null;
-let leaving = false;
+let swup = null;
 
 const debug = {
   ready: false,
@@ -43,83 +33,14 @@ const debug = {
     return halftone?.lastTransition ?? null;
   },
   navigate: (url) => {
-    window.location.assign(url);
+    if (swup) {
+      swup.navigate(url);
+    } else {
+      window.location.assign(url);
+    }
   },
 };
 window.__halftoneDebug = debug;
-
-async function start() {
-  for (const img of document.querySelectorAll("img[data-photo]")) {
-    img.src = photos[img.dataset.photo] ?? photos.a;
-  }
-
-  const fontStyle = document.createElement("style");
-  fontStyle.textContent = `@font-face { font-family: 'Brut Grotesque'; src: url("${fontUrl}") format('opentype'); font-weight: 500; font-display: swap; }`;
-  document.head.appendChild(fontStyle);
-
-  await Promise.all(
-    [...document.images].map((img) => img.decode().catch(() => {})),
-  );
-  await document.fonts.ready;
-
-  try {
-    const { createHalftone } = await import("./halftone/index.js");
-    halftone = await createHalftone({
-      params: {
-        dotSize: 4,
-        designWidth: 399,
-        dotScale: 1.05,
-        softness: 0,
-        rotation: -180,
-        center: [0.1, 0.1],
-        colorMode: 0,
-      },
-      zIndex: 40,
-    });
-  } catch (error) {
-    console.error("[demo] halftone failed to start", error);
-  }
-
-  window.__halftone = halftone;
-  debug.ready = true;
-
-  if (!halftone || !halftone.supported) {
-    notice.hidden = false;
-    return;
-  }
-
-  setupControls(window.__demo, FIRST);
-  await setupPins();
-  await resumePage();
-}
-
-/** Resume a cross-document transition on the incoming actual page. */
-async function resumePage() {
-  if (!halftone?.supported) return;
-  const pending = await loadPending();
-  if (!pending) return;
-
-  setBootImage(pending.png);
-  let outgoing = null;
-  try {
-    outgoing = await decodeSnapshot(pending.png);
-    await halftone.transition(() => {}, {
-      outgoing,
-      outgoingParams: {
-        gradient: { dark: "#82C1C0", light: "#FFFFFF" },
-      },
-      incomingParams: {
-        gradient: { dark: "#B7BB92", light: "#FFFFFF" },
-      },
-      onOutReady: finishBoot,
-    });
-  } catch (error) {
-    console.error("[demo] page transition failed", error);
-  } finally {
-    outgoing?.bitmap?.close?.();
-    await clearPending();
-  }
-}
 
 /* ------------------------------------------------------------------ */
 /* EDIT THESE TWO OBJECTS TO CHANGE THE ROWS                           */
@@ -154,8 +75,8 @@ const PINS = {
 };
 
 const ROW_IMAGES = {
-  first: document.querySelector('img[data-fx="single-default"]'),
-  second: document.querySelector('img[data-fx="two-hover"]'),
+  first: null,
+  second: null,
 };
 
 const ROW_CONFIGS = {
@@ -292,63 +213,203 @@ console.info(
   '[demo] Control API: window.__demo. Try __demo.setPattern("first", { paper: "#fff" }) or __demo.setGlobal({ dotSize: 8 }).',
 );
 
-const hfForm = document.querySelector(".hf-form");
-if (hfForm) {
-  hfForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const input = document.querySelector("#hf-email");
-    const error = document.querySelector(".hf-error");
-    const valid = Boolean(input?.value) && input.checkValidity();
-    if (error) error.style.visibility = valid ? "hidden" : "visible";
-    if (valid && input) input.value = "";
-  });
-}
-
-for (const button of document.querySelectorAll("[data-copy]")) {
-  button.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(button.dataset.copy);
-      const previous = button.textContent;
-      button.textContent = "✓";
-      window.setTimeout(() => {
-        button.textContent = previous;
-      }, 1200);
-    } catch {
-      /* clipboard unavailable */
-    }
-  });
-}
-
-document.addEventListener("click", (event) => {
-  const link = event.target.closest?.("a[data-page-transition]");
-  if (!link || leaving) return;
-  if (
-    event.defaultPrevented ||
-    event.button !== 0 ||
-    event.metaKey ||
-    event.ctrlKey ||
-    event.shiftKey ||
-    event.altKey ||
-    link.target ||
-    link.hasAttribute("download")
-  ) {
-    return;
+/** Wire interactive handlers on the Coalition page. */
+function setupCoalitionHandlers() {
+  const hfForm = document.querySelector(".hf-form");
+  if (hfForm) {
+    hfForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const input = document.querySelector("#hf-email");
+      const error = document.querySelector(".hf-error");
+      const valid = Boolean(input?.value) && input.checkValidity();
+      if (error) error.style.visibility = valid ? "hidden" : "visible";
+      if (valid && input) input.value = "";
+    });
   }
-  const url = new URL(link.href, window.location.href);
-  if (url.origin !== window.location.origin) return;
-  if (!halftone?.supported) return;
 
-  event.preventDefault();
-  leaving = true;
-  document.documentElement.setAttribute("aria-busy", "true");
-  void (async () => {
-    try {
-      await savePending(await snapshotPage());
-    } catch (error) {
-      console.error("[demo] could not save outgoing page", error);
+  for (const button of document.querySelectorAll("[data-copy]")) {
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy);
+        const previous = button.textContent;
+        button.textContent = "✓";
+        window.setTimeout(() => {
+          button.textContent = previous;
+        }, 1200);
+      } catch {
+        /* clipboard unavailable */
+      }
+    });
+  }
+}
+
+/** Initialize content for the current view: images, fonts, controls, pins or handlers. */
+async function initPage() {
+  const isCoalition = document.body.dataset.page === "coalition";
+
+  // Populate images from photos dictionary
+  for (const img of document.querySelectorAll("img[data-photo]")) {
+    img.src = photos[img.dataset.photo] ?? photos.a;
+  }
+
+  // Ensure all images are decoded before taking any transition snapshot
+  await Promise.all(
+    [...document.images].map((img) => img.decode().catch(() => {})),
+  );
+
+  // Update active page links in navigation
+  for (const link of document.querySelectorAll(".site-nav a")) {
+    const href = link.getAttribute("href") || "";
+    const isIndex =
+      href === "./" ||
+      href === "index.html" ||
+      href === "" ||
+      href.endsWith("/halftone-effect/") ||
+      href.endsWith("/halftone-effect/index.html");
+    if (!isCoalition && isIndex) {
+      link.setAttribute("aria-current", "page");
+    } else if (isCoalition && href.includes("coalition")) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
     }
-    window.location.assign(url.href);
-  })();
-});
+  }
+
+  // Page-specific setup
+  if (isCoalition) {
+    setupCoalitionHandlers();
+  } else {
+    ROW_IMAGES.first = document.querySelector('img[data-fx="single-default"]');
+    ROW_IMAGES.second = document.querySelector('img[data-fx="two-hover"]');
+    setupControls(window.__demo, FIRST);
+    await setupPins();
+  }
+}
+
+/** Wire Swup with the halftone cross-page transition effect. */
+function setupSwup() {
+  swup = new Swup({
+    containers: ["#app"],
+    animationSelector: false,
+    animateHistoryBrowsing: true,
+    linkSelector: "a[data-page-transition]",
+    resolveUrl: (url) => url.replace(/\/index\.html$/, "/"),
+  });
+
+  swup.hooks.before("link:click", (visit, { event }) => {
+    if (halftone?.busy) {
+      visit.ignored = true;
+      event.preventDefault();
+    }
+  });
+
+  swup.hooks.on("visit:start", (visit) => {
+    visit.animation.wait = true;
+    document.documentElement.setAttribute("aria-busy", "true");
+  });
+
+  swup.hooks.replace("visit:transition", async (visit, args, defaultHandler) => {
+    if (!halftone?.supported) {
+      if (visit.to.document?.body?.dataset?.page) {
+        document.body.dataset.page = visit.to.document.body.dataset.page;
+      }
+      await defaultHandler(visit, args);
+      await initPage();
+      return;
+    }
+
+    let pageData = { url: visit.to.url, html: visit.to.html };
+    if (!pageData.html) {
+      const fetched = await swup.fetchPage(visit.to.url);
+      pageData = fetched;
+      visit.to.html = fetched.html;
+      visit.to.document = new DOMParser().parseFromString(fetched.html, "text/html");
+    }
+
+    const doc = visit.to.document;
+
+    await halftone.transition(
+      async () => {
+        // 1. Release live pins from the outgoing page
+        halftone.unpinAll();
+
+        // 2. Sync body dataset.page attribute so page-level styles match immediately
+        if (doc?.body?.dataset?.page) {
+          document.body.dataset.page = doc.body.dataset.page;
+        }
+
+        // 3. Swap container contents using Swup
+        await swup.renderPage(visit, pageData);
+
+        // 4. Initialize images, pins, and controls on the incoming page
+        await initPage();
+      },
+      {
+        outgoingParams: {
+          gradient: { dark: "#82C1C0", light: "#FFFFFF" },
+        },
+        incomingParams: {
+          gradient: { dark: "#B7BB92", light: "#FFFFFF" },
+        },
+      },
+    );
+  });
+
+  swup.hooks.on("visit:end", () => {
+    document.documentElement.removeAttribute("aria-busy");
+  });
+
+  swup.hooks.on("visit:abort", () => {
+    document.documentElement.removeAttribute("aria-busy");
+  });
+
+  swup.hooks.on("visit:fail", () => {
+    document.documentElement.removeAttribute("aria-busy");
+  });
+}
+
+async function start() {
+  // Clear any legacy session markers
+  try {
+    sessionStorage.removeItem("halftone:page");
+    sessionStorage.removeItem("halftone:boot");
+    document.documentElement.classList.remove("halftone-booting");
+  } catch {}
+
+  const fontStyle = document.createElement("style");
+  fontStyle.textContent = `@font-face { font-family: 'Brut Grotesque'; src: url("${fontUrl}") format('opentype'); font-weight: 500; font-display: swap; }`;
+  document.head.appendChild(fontStyle);
+
+  await document.fonts.ready;
+
+  try {
+    const { createHalftone } = await import("./halftone/index.js");
+    halftone = await createHalftone({
+      params: {
+        dotSize: 4,
+        designWidth: 399,
+        dotScale: 1.05,
+        softness: 0,
+        rotation: -180,
+        center: [0.1, 0.1],
+        colorMode: 0,
+      },
+      zIndex: 40,
+    });
+  } catch (error) {
+    console.error("[demo] halftone failed to start", error);
+  }
+
+  window.__halftone = halftone;
+  debug.ready = true;
+
+  const notice = document.querySelector("#notice");
+  if (!halftone || !halftone.supported) {
+    if (notice) notice.hidden = false;
+  }
+
+  await initPage();
+  setupSwup();
+}
 
 void start();

@@ -134,6 +134,7 @@ export class Halftone {
 
 /** Update the base params and sync the active hover surface. */
   setParams(partial) {
+    this.transitionController?.invalidateSnapshot();
     this.params = normalizeParams(partial, this.params);
     this.hoverController?.applyParams();
     if (this.supported && !this.busy) void this.pinController?.refreshAll();
@@ -145,10 +146,16 @@ export class Halftone {
     return this.pinController?.pin(element, options);
   }
 
+/** Remove all live pinned patterns. */
+  unpinAll() {
+    this.pinController?.unpinAll();
+  }
+
 /** Replace a pinned image's complete config and rebuild it. */
   updatePin(element, options = {}) {
     if (this.overlay.destroyed || !this.supported || !element) return Promise.resolve(null);
     if (this.transitionController?.busy) return Promise.resolve(null);
+    this.transitionController?.invalidateSnapshot();
     return this.pinController.update(element, options);
   }
 

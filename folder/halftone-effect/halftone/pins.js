@@ -210,17 +210,23 @@ clipForOffset(offset, width, height) {
     }
   }
 
-/** Remove all live patterns. */
-  destroy() {
-    this._observer?.disconnect();
-    this._observer = null;
+  /** Remove all live patterns without tearing down observers. */
+  unpinAll() {
     for (const pin of this._pins) {
       for (const tween of pin.tweens) this.overlay.cancelTween(tween);
       pin.element.style.visibility = '';
+      if (pin.element.parentElement) pin.element.parentElement.style.background = '';
       for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
     }
     this._pins = [];
     this.overlay.patternLayer?.removeChildren();
     this.overlay.setCanvasBlend('normal');
+  }
+
+/** Remove all live patterns. */
+  destroy() {
+    this._observer?.disconnect();
+    this._observer = null;
+    this.unpinAll();
   }
 }

@@ -162,13 +162,13 @@ export class TransitionController {
   async run(update, options = {}) {
     if (typeof update !== "function") return false;
     if (!this.overlay.supported || this.overlay.destroyed) {
-      update();
+      await update();
       return false;
     }
     if (this._transitioning) return false;
 
     if (this.reducedMotion) {
-      update();
+      await update();
       this._invalidateSnapshot();
       this._scheduleIdle();
       return true;
@@ -212,7 +212,7 @@ export class TransitionController {
     try {
       if (!outgoing) outgoing = await this._capture();
       if (!outgoing) {
-        update();
+        await update();
         updated = true;
         return false;
       }
@@ -259,11 +259,16 @@ export class TransitionController {
       if (this.overlay.destroyed) return false;
 
       try {
-        update();
+        await update();
       } catch (error) {
         this.overlay.warn("update", error);
       }
       updated = true;
+
+      // Pinning the incoming page re-applies its pattern blend. The transition
+      // surfaces must stay in normal blend mode or the incoming page bleeds
+      // through the outgoing halftone.
+      this.overlay.setCanvasBlend('normal');
 
       debugIncomingStarted = performance.now();
       incomingPromise = (async () => {
@@ -386,7 +391,7 @@ export class TransitionController {
       this.overlay.warn("transition", error);
       if (!updated) {
         try {
-          update();
+          await update();
         } catch (updateError) {
           this.overlay.warn("update", updateError);
         }
