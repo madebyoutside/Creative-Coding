@@ -90,7 +90,7 @@ export class PinController {
       if (blend !== 'normal') surface.sprite.blendMode = blend;
       this.overlay.patternLayer.addChild(surface.sprite);
       const record = this.overlay.trackSurface(surface, blurEntry);
-      const layer = { surface, record, offset: [...offset], params: layerParams };
+      const layer = { surface, record, offset: [...offset], params: layerParams, alpha };
       pin.layers.push(layer);
       pin.top = layer;
       if (index === specs.length - 1) surface.setClip(this.clipForOffset(offset, fit.dw, fit.dh));
@@ -124,6 +124,18 @@ clipForOffset(offset, width, height) {
       pin.element.style.visibility = '';
     }
     for (const pin of pins) await this._pin(pin.element, pin.options);
+  }
+
+/** Set the overall reveal for one pinned image (0 = original, 1 = full pattern). */
+  setReveal(element, value) {
+    const pin = this.get(element);
+    if (!pin) return false;
+    const reveal = Math.max(0, Math.min(1, Number(value) || 0));
+    for (const layer of pin.layers) {
+      layer.surface.setReveal(reveal * (layer.alpha ?? 1));
+    }
+    this.overlay.requestRender();
+    return true;
   }
 
 /** Animate the top pattern layer offset. */
@@ -210,17 +222,23 @@ clipForOffset(offset, width, height) {
     }
   }
 
-/** Remove all live patterns. */
-  destroy() {
-    this._observer?.disconnect();
-    this._observer = null;
+  /** Remove all live patterns without tearing down observers. */
+  unpinAll() {
     for (const pin of this._pins) {
       for (const tween of pin.tweens) this.overlay.cancelTween(tween);
       pin.element.style.visibility = '';
+      if (pin.element.parentElement) pin.element.parentElement.style.background = '';
       for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
     }
     this._pins = [];
     this.overlay.patternLayer?.removeChildren();
     this.overlay.setCanvasBlend('normal');
+  }
+
+/** Remove all live patterns. */
+  destroy() {
+    this._observer?.disconnect();
+    this._observer = null;
+    this.unpinAll();
   }
 }

@@ -38,6 +38,16 @@ export class TransitionController {
     this._captureGeneration = 0;
     this._transitioning = false;
     this.lastTransition = null;
+    this.speed = 1;
+  }
+
+  get transitionSpeed() {
+    return this.speed;
+  }
+
+  setSpeed(value) {
+    this.speed = Math.min(3, Math.max(0.4, Number(value) || 1));
+    return this.speed;
   }
 
   get busy() {
@@ -162,19 +172,21 @@ export class TransitionController {
   async run(update, options = {}) {
     if (typeof update !== "function") return false;
     if (!this.overlay.supported || this.overlay.destroyed) {
-      update();
+      await update();
       return false;
     }
     if (this._transitioning) return false;
 
     if (this.reducedMotion) {
-      update();
+      await update();
       this._invalidateSnapshot();
       this._scheduleIdle();
       return true;
     }
 
     this._transitioning = true;
+    const speed = this.speed;
+    const ms = (value) => Math.max(0, Math.round(value / speed));
     this.overlay.setCanvasBlend('normal');
     if (this.overlay.patternLayer) this.overlay.patternLayer.visible = false;
     const debugStart = performance.now();
@@ -212,7 +224,7 @@ export class TransitionController {
     try {
       if (!outgoing) outgoing = await this._capture();
       if (!outgoing) {
-        update();
+        await update();
         updated = true;
         return false;
       }
@@ -254,16 +266,21 @@ export class TransitionController {
         this.overlay.warn('out-ready', error);
       }
 
-      await this.overlay.wait(OUT_HOLD_MS);
-      await this.overlay.wait(SWAP_MS);
+      await this.overlay.wait(ms(OUT_HOLD_MS));
+      await this.overlay.wait(ms(SWAP_MS));
       if (this.overlay.destroyed) return false;
 
       try {
-        update();
+        await update();
       } catch (error) {
         this.overlay.warn("update", error);
       }
       updated = true;
+
+      // Pinning the incoming page re-applies its pattern blend. The transition
+      // surfaces must stay in normal blend mode or the incoming page bleeds
+      // through the outgoing halftone.
+      this.overlay.setCanvasBlend('normal');
 
       debugIncomingStarted = performance.now();
       incomingPromise = (async () => {
@@ -271,12 +288,12 @@ export class TransitionController {
         return this._capture();
       })();
 
-      await this.overlay.wait(INCOMING_DELAY_MS);
+      await this.overlay.wait(ms(INCOMING_DELAY_MS));
       if (this.overlay.destroyed) return false;
 
       incoming = await Promise.race([
         incomingPromise,
-        this.overlay.wait(INCOMING_TIMEOUT_MS).then(() => null),
+        this.overlay.wait(ms(INCOMING_TIMEOUT_MS)).then(() => null),
       ]);
       debugIncomingMs = incoming
         ? performance.now() - debugIncomingStarted
@@ -325,7 +342,7 @@ export class TransitionController {
         this.overlay.tween({
           from: 1,
           to: 0,
-          duration: CROSSFADE_MS,
+          duration: ms(CROSSFADE_MS),
           ease: easeInOutCubic,
           onUpdate: (value) => {
             if (!outRecord.destroyed) outSurface.setReveal(value);
@@ -334,20 +351,20 @@ export class TransitionController {
         this.overlay.tween({
           from: 0,
           to: 1,
-          duration: CROSSFADE_MS,
+          duration: ms(CROSSFADE_MS),
           ease: easeInOutCubic,
           onUpdate: (value) => {
             if (!inRecord.destroyed) inSurface.setReveal(value);
           },
         });
 
-        await this.overlay.wait(CROSSFADE_MS);
+        await this.overlay.wait(ms(CROSSFADE_MS));
         if (this.overlay.destroyed) return false;
 
         this.overlay.tween({
           from: 1,
           to: 0,
-          duration: RESOLVE_MS,
+          duration: ms(RESOLVE_MS),
           ease: easeOutCubic,
           onUpdate: (value) => {
             if (!inRecord.destroyed) inSurface.setReveal(value);
@@ -357,28 +374,28 @@ export class TransitionController {
         this.overlay.tween({
           from: 0,
           to: 1,
-          duration: RESOLVE_MS,
+          duration: ms(RESOLVE_MS),
           ease: easeOutCubic,
           onUpdate: (value) => {
             if (realSurface && !realSurface.destroyed) realSurface.alpha = value;
           },
         });
-        await this.overlay.wait(RESOLVE_MS);
+        await this.overlay.wait(ms(RESOLVE_MS));
         if (this.overlay.destroyed) return false;
       } else {
-        await this.overlay.wait(280);
+        await this.overlay.wait(ms(280));
         if (this.overlay.destroyed) return false;
         this.overlay.tween({
           from: outSurface.reveal,
           to: 0,
-          duration: 320,
+          duration: ms(320),
           ease: easeInOutCubic,
           onUpdate: (value) => {
             if (!outRecord.destroyed) outSurface.setReveal(value);
             if (backing && !backing.destroyed) backing.alpha = value;
           },
         });
-        await this.overlay.wait(320);
+        await this.overlay.wait(ms(320));
       }
 
       return true;
@@ -386,7 +403,7 @@ export class TransitionController {
       this.overlay.warn("transition", error);
       if (!updated) {
         try {
-          update();
+          await update();
         } catch (updateError) {
           this.overlay.warn("update", updateError);
         }
