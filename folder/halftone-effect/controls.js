@@ -87,7 +87,7 @@ export function setupControls(api, first) {
 
     <section class="ctl-group">
       <h3>Page transition</h3>
-      ${range("c-transition-speed", "Speed", 0.5, 2, 0.1, api.transitionSpeed ?? 1, "×")}
+      ${range("c-transition-speed", "Speed", 0.25, 3, 0.05, api.transitionSpeed ?? 1, "×")}
       <p class="ctl-hint">Higher is faster. Applies to both pages.</p>
     </section>
 

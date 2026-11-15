@@ -46,7 +46,7 @@ export class TransitionController {
   }
 
   setSpeed(value) {
-    this.speed = Math.min(3, Math.max(0.4, Number(value) || 1));
+    this.speed = Math.min(4, Math.max(0.25, Number(value) || 1));
     return this.speed;
   }
 
@@ -293,7 +293,8 @@ export class TransitionController {
 
       incoming = await Promise.race([
         incomingPromise,
-        this.overlay.wait(ms(INCOMING_TIMEOUT_MS)).then(() => null),
+        // Capture time doesn't depend on speed, so this isn't scaled.
+        this.overlay.wait(INCOMING_TIMEOUT_MS).then(() => null),
       ]);
       debugIncomingMs = incoming
         ? performance.now() - debugIncomingStarted
