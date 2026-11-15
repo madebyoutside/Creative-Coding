@@ -174,6 +174,22 @@ export class Halftone {
     return this.pinController?.setReveal(element, value) ?? false;
   }
 
+/** Dissolve a pinned image into its original (0 = pattern, 1 = original). */
+  setPinDissolve(element, value) {
+    return this.pinController?.setDissolve(element, value) ?? false;
+  }
+
+/** Run a tween on the overlay ticker. */
+  tween(spec) {
+    if (!this.supported || this.destroyed) return null;
+    return this.overlay.tween(spec);
+  }
+
+/** Stop a tween started with tween(). */
+  cancelTween(tween) {
+    this.overlay?.cancelTween(tween);
+  }
+
 /** Read the live config for a pinned image. */
   getPinConfig(element) {
     return this.pinController?.get(element)?.options ?? null;

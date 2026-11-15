@@ -23,7 +23,7 @@ struct HalftoneUniforms {
   colors: array<vec4<f32>, 8>,
   positions: array<f32, 8>,
   gmeta: vec4<f32>,  // count, mixSpace, repeat, scatter
-  gmeta2: vec4<f32>, // frequency, offset, unused, enabled
+  gmeta2: vec4<f32>, // frequency, offset, amount (0 = raw, 1 = mapped), enabled
 };
 
 @group(0) @binding(0) var<uniform> gfu: GlobalFilterUniforms;
@@ -308,8 +308,9 @@ fn mainFragment(@location(0) local: vec2<f32>) -> @location(0) vec4<f32> {
       t = 1.0 - abs(fract((luma - offset) * freq * 0.5 + sc) - 0.5) * 2.0;
     }
     let mapped = ramp(t, i32(halftoneUniforms.gmeta.y + 0.5));
-    color = mapped.rgb * mapped.a;
-    outAlpha = outAlpha * mapped.a;
+    let amount = clamp(halftoneUniforms.gmeta2.z, 0.0, 1.0);
+    color = mix(color, mapped.rgb * mapped.a, amount);
+    outAlpha = outAlpha * mix(1.0, mapped.a, amount);
   }
 
   return vec4<f32>(color * outAlpha, outAlpha);
@@ -582,8 +583,9 @@ void main() {
     if (repeat == 1) t = fract((luma - offset) * freq + sc);
     else if (repeat == 2) t = 1.0 - abs(fract((luma - offset) * freq * 0.5 + sc) - 0.5) * 2.0;
     vec4 mapped = ramp(t, int(gmeta.y + 0.5));
-    color = mapped.rgb * mapped.a;
-    outAlpha *= mapped.a;
+    float amount = clamp(gmeta2.z, 0.0, 1.0);
+    color = mix(color, mapped.rgb * mapped.a, amount);
+    outAlpha *= mix(1.0, mapped.a, amount);
   }
 
   finalColor = vec4(color * outAlpha, outAlpha);
@@ -717,7 +719,7 @@ export function createUniformGroup() {
     colors: { value: new Float32Array(32), type: 'vec4<f32>', size: 8 },
     positions: { value: new Float32Array(8), type: 'f32', size: 8 },
     gmeta: { value: new Float32Array([0, 0, 0, 0]), type: 'vec4<f32>' },
-    gmeta2: { value: new Float32Array([2, 0, 0, 0]), type: 'vec4<f32>' },
+    gmeta2: { value: new Float32Array([2, 0, 1, 0]), type: 'vec4<f32>' },
   });
 }
 

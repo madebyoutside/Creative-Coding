@@ -93,10 +93,10 @@ export function setupControls(api, first) {
 
     <section class="ctl-group">
       <h3>Scroll image</h3>
-      ${select("c-scroll-once", "Fade", [["once", "Once"], ["every", "Every time"]], api.scrollRevealOnce ? "once" : "every")}
+      ${select("c-scroll-once", "Dissolve", [["once", "Once"], ["every", "Every time"]], api.scrollRevealOnce ? "once" : "every")}
       ${range("c-scroll-hold", "Hold after visible", 0, 10, 0.1, api.scrollRevealHold ?? 3, "s")}
-      ${range("c-scroll-fade", "Fade time", 0.1, 8, 0.1, api.scrollRevealFade ?? 1.8, "s")}
-      <p class="ctl-hint">The pattern waits until the image is fully in view.</p>
+      ${range("c-scroll-fade", "Dissolve time", 0.1, 8, 0.1, api.scrollRevealFade ?? 1.8, "s")}
+      <p class="ctl-hint">Waits until the image is fully in view, then shrinks the dots, drops the gradient map and fades the paper together.</p>
     </section>
 
     <section class="ctl-group">

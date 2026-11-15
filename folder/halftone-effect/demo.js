@@ -11,6 +11,7 @@ let halftone = null;
 let swup = null;
 let scrollRevealCleanup = null;
 let scrollRevealRefresh = null;
+let scrollRevealUpdate = null;
 let lenis = null;
 let lenisFrame = 0;
 const scrollRevealTiming = { hold: 3000, fade: 1800, once: true };
@@ -143,6 +144,7 @@ function setupSmoothScroll() {
   lenis = new Lenis({ wrapper, content, lerp: 1, autoRaf: false });
   lenis.on("scroll", () => {
     halftone.sync({ immediate: true });
+    scrollRevealUpdate?.();
   });
   const loop = (time) => {
     lenis?.raf(time);
@@ -158,91 +160,74 @@ function destroySmoothScroll() {
   lenis = null;
 }
 
-/** Hold the pattern while the image arrives, then fade it after a pause. */
+/** Hold the pattern while the image arrives, then dissolve it after a pause. */
 function setupScrollReveal() {
   scrollRevealCleanup?.();
   scrollRevealCleanup = null;
   scrollRevealRefresh = null;
+  scrollRevealUpdate = null;
 
   const img = document.querySelector('img[data-fx="scroll-reveal"]');
   if (!img || !halftone?.supported) return;
 
   const scrollRoot = img.closest(".view-effects");
-  const setScrollReveal = (value) => {
-    const reveal = Math.max(0, Math.min(1, value));
-    halftone.setPinReveal(img, reveal);
-    if (reveal >= 0.999) {
-      img.style.visibility = "hidden";
-      img.style.opacity = "";
-    } else {
-      img.style.visibility = "visible";
-      img.style.opacity = String(1 - reveal);
-    }
-  };
-
-  let frame = 0;
+  let dissolve = 0;
   let holdTimer = 0;
-  let fadeFrame = 0;
+  let tween = null;
   let fullyVisible = false;
   let completed = false;
+
+  const setDissolve = (value) => {
+    dissolve = Math.max(0, Math.min(1, value));
+    halftone.setPinDissolve(img, dissolve);
+  };
 
   const clearHold = () => {
     if (holdTimer) window.clearTimeout(holdTimer);
     holdTimer = 0;
   };
 
-  const clearFade = () => {
-    if (fadeFrame) cancelAnimationFrame(fadeFrame);
-    fadeFrame = 0;
+  const clearTween = () => {
+    if (tween) halftone.cancelTween(tween);
+    tween = null;
   };
 
-  const fadeOut = () => {
-    const start = performance.now();
-    const duration = Math.max(80, scrollRevealTiming.fade);
-    const step = (now) => {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = t * t * (3 - 2 * t);
-      setScrollReveal(1 - eased);
-      if (t < 1) {
-        fadeFrame = requestAnimationFrame(step);
-      } else {
-        fadeFrame = 0;
+  const dissolveOut = () => {
+    clearTween();
+    tween = halftone.tween({
+      from: dissolve,
+      to: 1,
+      duration: Math.max(80, scrollRevealTiming.fade * (1 - dissolve)),
+      ease: (t) => t * t * (3 - 2 * t),
+      onUpdate: setDissolve,
+      onComplete: () => {
+        tween = null;
         completed = true;
-      }
-    };
-    fadeFrame = requestAnimationFrame(step);
+      },
+    });
   };
 
   const startHold = () => {
     clearHold();
-    holdTimer = window.setTimeout(() => {
-      holdTimer = 0;
-      fadeOut();
-    }, Math.max(0, scrollRevealTiming.hold));
+    holdTimer = window.setTimeout(
+      () => {
+        holdTimer = 0;
+        dissolveOut();
+      },
+      Math.max(0, scrollRevealTiming.hold),
+    );
   };
 
   const update = () => {
-    frame = 0;
-    // Keep pinned surfaces aligned with the inner .view-effects scroller.
-    halftone.sync();
-
     const rect = img.getBoundingClientRect();
     const vh = window.innerHeight || 1;
     const isFull = rect.top >= 0 && rect.bottom <= vh && rect.width > 0;
     const isOut = rect.bottom <= 0 || rect.top >= vh;
 
     if (isFull) {
-      if (completed) {
-        // In "once" mode keep the original visible if the pin was rebuilt.
-        if (scrollRevealTiming.once) setScrollReveal(0);
-        fullyVisible = true;
-        return;
-      }
       if (!fullyVisible) {
         fullyVisible = true;
-        clearFade();
-        setScrollReveal(1);
-        startHold();
+        if (!completed && !tween) startHold();
       }
       return;
     }
@@ -250,52 +235,52 @@ function setupScrollReveal() {
     if (isOut) {
       fullyVisible = false;
       clearHold();
-      clearFade();
-      if (scrollRevealTiming.once && completed) {
-        setScrollReveal(0);
-      } else {
-        // Every-time mode only rearms after the image is completely gone.
+      if (!(scrollRevealTiming.once && completed)) {
+        clearTween();
         completed = false;
-        setScrollReveal(1);
+        setDissolve(0);
       }
       return;
     }
 
-    // Partially visible: don't reapply the halftone. Let any running fade
-    // finish; only a full exit rearms it in every-time mode.
     fullyVisible = false;
     clearHold();
   };
 
+  let frame = 0;
   const schedule = () => {
-    if (!frame) frame = requestAnimationFrame(update);
+    if (!frame)
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        update();
+      });
   };
 
   scrollRoot?.addEventListener("scroll", schedule, { passive: true });
-  window.addEventListener("scroll", schedule, { passive: true });
   window.addEventListener("resize", schedule);
+  scrollRevealUpdate = update;
 
+  setDissolve(0);
   update();
 
   scrollRevealRefresh = () => {
     fullyVisible = false;
     completed = false;
     clearHold();
-    clearFade();
-    halftone.setPinReveal(img, 1);
+    clearTween();
+    setDissolve(0);
     update();
   };
 
   scrollRevealCleanup = () => {
     scrollRoot?.removeEventListener("scroll", schedule);
-    window.removeEventListener("scroll", schedule);
     window.removeEventListener("resize", schedule);
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     clearHold();
-    clearFade();
-    fullyVisible = false;
+    clearTween();
     scrollRevealRefresh = null;
+    scrollRevealUpdate = null;
   };
 }
 
