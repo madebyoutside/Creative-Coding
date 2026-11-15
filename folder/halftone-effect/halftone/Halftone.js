@@ -94,8 +94,8 @@ export class Halftone {
       this.pinController.sync();
       this.transitionController.invalidateSnapshot();
     };
-    this.overlay.onScroll = () => {
-      this.transitionController.onScroll();
+    this.overlay.onScroll = (event) => {
+      this.transitionController.onScroll(event);
       this.hoverController.syncRect();
       this.pinController.sync();
     };
@@ -184,11 +184,12 @@ export class Halftone {
     this.pinController?.shiftPin(element, offset, duration);
   }
 
-/** Reposition baked pins and the active hover after layout changes. */
-  sync() {
+/** Reposition baked pins and the active hover; `immediate` renders this frame. */
+  sync({ immediate = false } = {}) {
     if (!this.supported || this.destroyed) return;
     this.pinController?.sync();
     this.hoverController?.syncRect();
+    if (immediate) this.overlay.renderNow();
     this.overlay.requestRender();
   }
 

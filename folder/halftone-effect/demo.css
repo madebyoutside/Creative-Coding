@@ -179,6 +179,15 @@ body {
   scrollbar-width: thin;
 }
 
+/* Lenis drives .view-effects so the WebGL overlay moves in the same frame. */
+.view-effects.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.view-effects.lenis-stopped {
+  overflow: clip;
+}
+
 /* The main column is tall because it contains the scroll-reveal image;
    the tall grid row is what lets the panel stay sticky while scrolling. */
 .demo-layout {

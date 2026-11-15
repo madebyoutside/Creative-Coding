@@ -142,11 +142,11 @@ export class TransitionController {
   }
 
   /** Invalidate the snapshot when the page has scrolled since capture. */
-  onScroll() {
-    if (
-      this._snapshot &&
-      Math.abs(window.scrollY - this._snapshotScrollY) > 2
-    ) {
+  onScroll(event) {
+    if (!this._snapshot || this._transitioning) return;
+    const target = event?.target;
+    const inner = target && target !== document && target !== window;
+    if (inner || Math.abs(window.scrollY - this._snapshotScrollY) > 2) {
       this._invalidateSnapshot();
     }
   }

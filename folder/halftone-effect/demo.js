@@ -3,6 +3,7 @@ import photo5 from "/src/assets/halftone-effect/photo-5.png";
 import fontUrl from "/src/assets/fonts/Brut_Grotesque-Medium.otf";
 import { createFirstConfig, setupControls } from "./controls.js";
 import Swup from "swup";
+import Lenis from "lenis";
 
 const photos = { a: photo2, e: photo5 };
 
@@ -10,6 +11,8 @@ let halftone = null;
 let swup = null;
 let scrollRevealCleanup = null;
 let scrollRevealRefresh = null;
+let lenis = null;
+let lenisFrame = 0;
 const scrollRevealTiming = { hold: 3000, fade: 1800, once: true };
 
 const debug = {
@@ -128,6 +131,31 @@ async function setupPins() {
   }
   await Promise.all(jobs);
   halftone.sync();
+}
+
+/** Drive .view-effects with Lenis so the overlay redraws in the same frame as the scroll. */
+function setupSmoothScroll() {
+  destroySmoothScroll();
+  const wrapper = document.querySelector(".view-effects");
+  const content = wrapper?.querySelector(".demo-layout");
+  if (!wrapper || !content || !halftone?.supported) return;
+
+  lenis = new Lenis({ wrapper, content, lerp: 1, autoRaf: false });
+  lenis.on("scroll", () => {
+    halftone.sync({ immediate: true });
+  });
+  const loop = (time) => {
+    lenis?.raf(time);
+    lenisFrame = requestAnimationFrame(loop);
+  };
+  lenisFrame = requestAnimationFrame(loop);
+}
+
+function destroySmoothScroll() {
+  if (lenisFrame) cancelAnimationFrame(lenisFrame);
+  lenisFrame = 0;
+  lenis?.destroy();
+  lenis = null;
 }
 
 /** Hold the pattern while the image arrives, then fade it after a pause. */
@@ -489,6 +517,7 @@ async function initPage() {
     await setupPins();
   }
 
+  setupSmoothScroll();
   setupScrollReveal();
 }
 
@@ -514,52 +543,60 @@ function setupSwup() {
     document.documentElement.setAttribute("aria-busy", "true");
   });
 
-  swup.hooks.replace("visit:transition", async (visit, args, defaultHandler) => {
-    if (!halftone?.supported) {
-      if (visit.to.document?.body?.dataset?.page) {
-        document.body.dataset.page = visit.to.document.body.dataset.page;
-      }
-      await defaultHandler(visit, args);
-      await initPage();
-      return;
-    }
-
-    let pageData = { url: visit.to.url, html: visit.to.html };
-    if (!pageData.html) {
-      const fetched = await swup.fetchPage(visit.to.url);
-      pageData = fetched;
-      visit.to.html = fetched.html;
-      visit.to.document = new DOMParser().parseFromString(fetched.html, "text/html");
-    }
-
-    const doc = visit.to.document;
-
-    await halftone.transition(
-      async () => {
-        // 1. Release live pins from the outgoing page
-        halftone.unpinAll();
-
-        // 2. Sync body dataset.page attribute so page-level styles match immediately
-        if (doc?.body?.dataset?.page) {
-          document.body.dataset.page = doc.body.dataset.page;
+  swup.hooks.replace(
+    "visit:transition",
+    async (visit, args, defaultHandler) => {
+      if (!halftone?.supported) {
+        if (visit.to.document?.body?.dataset?.page) {
+          document.body.dataset.page = visit.to.document.body.dataset.page;
         }
-
-        // 3. Swap container contents using Swup
-        await swup.renderPage(visit, pageData);
-
-        // 4. Initialize images, pins, and controls on the incoming page
+        await defaultHandler(visit, args);
         await initPage();
-      },
-      {
-        outgoingParams: {
-          gradient: { dark: "#82C1C0", light: "#FFFFFF" },
+        return;
+      }
+
+      let pageData = { url: visit.to.url, html: visit.to.html };
+      if (!pageData.html) {
+        const fetched = await swup.fetchPage(visit.to.url);
+        pageData = fetched;
+        visit.to.html = fetched.html;
+        visit.to.document = new DOMParser().parseFromString(
+          fetched.html,
+          "text/html",
+        );
+      }
+
+      const doc = visit.to.document;
+
+      await halftone.transition(
+        async () => {
+          // 1. Release live pins and the scroller from the outgoing page
+          destroySmoothScroll();
+          scrollRevealCleanup?.();
+          halftone.unpinAll();
+
+          // 2. Sync body dataset.page attribute so page-level styles match immediately
+          if (doc?.body?.dataset?.page) {
+            document.body.dataset.page = doc.body.dataset.page;
+          }
+
+          // 3. Swap container contents using Swup
+          await swup.renderPage(visit, pageData);
+
+          // 4. Initialize images, pins, and controls on the incoming page
+          await initPage();
         },
-        incomingParams: {
-          gradient: { dark: "#B7BB92", light: "#FFFFFF" },
+        {
+          outgoingParams: {
+            gradient: { dark: "#82C1C0", light: "#FFFFFF" },
+          },
+          incomingParams: {
+            gradient: { dark: "#B7BB92", light: "#FFFFFF" },
+          },
         },
-      },
-    );
-  });
+      );
+    },
+  );
 
   swup.hooks.on("visit:end", () => {
     document.documentElement.removeAttribute("aria-busy");

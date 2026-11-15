@@ -147,6 +147,12 @@ export class Overlay {
     }
   }
 
+/** Render synchronously in the current frame. */
+  renderNow() {
+    if (this.destroyed || !this.renderer) return;
+    this._renderFrame();
+  }
+
 /** Mark the overlay dirty and schedule the next frame. */
   requestRender() {
     this._dirty = true;
@@ -216,8 +222,8 @@ export class Overlay {
     }, 150);
   };
 
-  _handleScroll = () => {
-    this.onScroll?.();
+  _handleScroll = (event) => {
+    this.onScroll?.(event);
   };
 
   _handleVisibility = () => {
