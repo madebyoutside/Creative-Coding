@@ -1,0 +1,107 @@
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #ece5e0;
+  color: #1c221c;
+  font-family: system-ui, sans-serif;
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* main.js sets the aspect ratio and positions every band and letter in % of it, so it scales with the width */
+.logo {
+  position: relative;
+  width: min(560px, 80vw);
+  visibility: hidden;
+}
+
+.band {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  background: #fff;
+}
+
+.letter {
+  position: absolute;
+  left: 0; 
+  will-change: transform;
+}
+
+.letter svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Settings panel */
+.panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  font-size: 13px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.panel summary {
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.controls {
+  display: grid;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.controls label {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.controls input[type='range'] { width: 100%; }
+
+.controls .hint {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.controls button, .controls select {
+  font: inherit;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.controls select { width: 100%; }
+
+.controls .buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.controls button { flex: 1; }

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Logo Random Spacing</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="stage">
+    <div class="logo" role="img" aria-label="Human First Creatives Coalition"></div>
+  </main>
+
+  <details class="panel" open>
+    <summary>Settings</summary>
+    <form class="controls">
+      <label><span>Randomness</span><input type="range" name="power" min="0.5" max="4" step="0.1" value="2"><output>2</output><small class="hint">Low spreads the space evenly, high piles it into one or two big gaps.</small></label>
+      <label><span>Smallest gap</span><input type="range" name="minGap" min="0" max="30" step="1" value="11"><output>11</output></label>
+      <label><span>Gap between words (s)</span><input type="range" name="wordDelay" min="0" max="0.8" step="0.01" value="0.25"><output>0.25</output><small class="hint">Words appear top to bottom.</small></label>
+      <label><span>Each word</span>
+        <select name="letters">
+          <option value="wipe">Letter by letter</option>
+          <option value="word" selected>Whole word</option>
+        </select><span></span>
+      </label>
+      <label><span>Animation</span>
+        <select name="animation">
+          <option value="fade">Opacity fade</option>
+          <option value="clip">Clip-path wipe</option>
+        </select><span></span>
+      </label>
+      <label><span>Tilt (deg)</span><input type="range" name="tilt" min="0" max="30" step="1" value="2"><output>2</output><small class="hint">Only for the clip-path wipe.</small></label>
+      <label><span>Start delay (s)</span><input type="range" name="delay" min="0" max="2" step="0.1" value="0.3"><output>0.3</output></label>
+      <label><span>Gap between letters (s)</span><input type="range" name="stagger" min="0" max="0.15" step="0.01" value="0.04"><output>0.04</output></label>
+      <label><span>Time to appear (s)</span><input type="range" name="duration" min="0.1" max="1.5" step="0.05" value="0.4"><output>0.4</output></label>
+      <label><span>Shuffle time (s)</span><input type="range" name="shuffleDuration" min="0.2" max="3" step="0.1" value="1.2"><output>1.2</output></label>
+      <label><span>Auto shuffle every (s)</span><input type="range" name="interval" min="0" max="8" step="0.5" value="3"><output>3</output><small class="hint">0 turns it off.</small></label>
+      <label><span>Before shuffling</span>
+        <select name="start">
+          <option value="even">Evenly spaced</option>
+          <option value="packed">Packed to the left</option>
+          <option value="random">Already random</option>
+        </select><span></span>
+      </label>
+      <div class="buttons">
+        <button type="reset">Reset</button>
+      </div>
+    </form>
+  </details>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
