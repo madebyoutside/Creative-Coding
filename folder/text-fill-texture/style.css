@@ -1,0 +1,105 @@
+@font-face {
+  font-family: 'Brut Grotesque';
+  src: url('/src/assets/fonts/Brut_Grotesque-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+}
+
+:root {
+  --fill: none; /* the noise tile, set by main.js */
+}
+
+html, body {
+  margin: 0;
+  background: #f1f0ec;
+  color: #1c221c;
+}
+
+body {
+  font-family: 'Brut Grotesque', sans-serif;
+  font-weight: 500;
+}
+
+.page {
+  padding: 10vh 7vw 40vh;
+}
+
+h1 {
+  margin: 0;
+  font-size: 25vw;
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+}
+
+/* The noise shows through the letters only: the background is clipped to the text and the text itself is see-through */
+.fill-text {
+  background-image: var(--fill);
+  background-size: 256px 256px; 
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: url(#rough-edge); 
+}
+
+/* Settings panel */
+.panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  font: 13px system-ui, sans-serif;
+  color: #000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.panel summary {
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.controls {
+  display: grid;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.controls label {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.controls input[type='range'] { width: 100%; }
+
+.controls .hint {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.controls .buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.controls button {
+  flex: 1;
+  font: inherit;
+}

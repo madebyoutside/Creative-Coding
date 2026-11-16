@@ -17,7 +17,7 @@ const animations = {
     { clipPath: 'inset(-20% 100% -20% 0%)', rotate: tilt, transformOrigin: '0% 100%' },
     { clipPath: 'inset(-20% 0% -20% 0%)', rotate: 0 },
   ],
-  fade: () => [{ opacity: 0 }, { opacity: 1 }],
+  fade: () => [{ opacity: 0 }, { opacity: 1, ease: 'steps(1)' }], // jumps straight from 0 to 1, no in-between
 };
 
 export function play(heading) {
@@ -38,10 +38,10 @@ export function play(heading) {
     const byLetter = settings.letters === 'wipe';
 
     timeline.fromTo(byLetter ? word.querySelectorAll('.char') : word, from, {
+      ease: 'none', // before ...to, so the fade's own ease wins
       ...to,
       duration: Math.max(0.001, settings.duration),
       stagger: byLetter ? Number(settings.stagger) : 0,
-      ease: 'none',
     }, i * settings.wordDelay);
   });
 

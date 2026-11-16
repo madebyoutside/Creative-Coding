@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Text Fill Texture</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="page">
+    <h1 class="fill-text">Text fill</h1>
+  </main>
+
+  <!-- Rough edge -->
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <filter id="rough-edge" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <!-- random noise tile-->
+      <feImage class="noise" x="0" y="0" width="128" height="128" preserveAspectRatio="none" />
+      <feTile result="noise" />
+      <feDisplacementMap class="scatter" in="SourceGraphic" in2="noise" scale="8" xChannelSelector="R" yChannelSelector="G" />
+      <!-- soften the scattered pixels a little -->
+      <feGaussianBlur class="soften" stdDeviation="0.3" />
+    </filter>
+  </svg>
+
+  <details class="panel" open>
+    <summary>Settings</summary>
+    <form class="controls">
+      <label><span>Ink colour</span><input type="color" name="ink" value="#1c221c"><span></span></label>
+      <label><span>Speck colour</span><input type="color" name="speck" value="#8f8f8a"><span></span></label>
+      <label><span>Amount</span><input type="range" name="amount" min="0" max="1" step="0.01" value="0.12"><output>0.12</output><small class="hint">How much of the ink turns into specks.</small></label>
+      <label><span>Softness</span><input type="range" name="softness" min="0.05" max="1" step="0.01" value="0.2"><output>0.2</output><small class="hint">Low gives hard, crisp specks. High blends them into the ink.</small></label>
+      <label><span>Grain size (px)</span><input type="range" name="grainSize" min="0.5" max="6" step="0.5" value="6"><output>6</output></label>
+      <label><span>Clumping</span><input type="range" name="clumping" min="0" max="1" step="0.01" value="0.83"><output>0.83</output><small class="hint">0 is even grain. Higher gathers the specks into patches, like worn print.</small></label>
+      <label><span>Edge radius (px)</span><input type="range" name="edgeRadius" min="0" max="12" step="0.5" value="3"><output>3</output><small class="hint">How far the edge pixels scatter. Higher gives a rougher edge. 0 turns it off.</small></label>
+      <label><span>Edge size (px)</span><input type="range" name="edgeSize" min="0.5" max="4" step="0.5" value="0.5"><output>0.5</output><small class="hint">Size of the scattered dots. Small is fine grain, big is chunky.</small></label>
+      <label><span>Edge blur (px)</span><input type="range" name="edgeBlur" min="0" max="2" step="0.05" value="0.3"><output>0.3</output><small class="hint">Softens the scattered pixels. 0 keeps them crisp.</small></label>
+      <div class="buttons">
+        <button type="reset">Reset</button>
+        <button type="button" class="regenerate">New grain</button>
+      </div>
+    </form>
+  </details>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
