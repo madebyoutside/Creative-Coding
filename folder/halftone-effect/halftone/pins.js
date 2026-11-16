@@ -98,7 +98,7 @@ export class PinController {
     }
 
     if (!pin.layers.length) return null;
-    pin.paper = pattern.on === 'color' ? pattern.paper : null;
+    pin.colorMode = pattern.on === 'color';
     pin.dissolve = 0;
     this._pins.push(pin);
     const dissolve = this._dissolve.get(element) ?? 0;
@@ -126,8 +126,8 @@ clipForOffset(offset, width, height) {
       const index = this._pins.indexOf(pin);
       if (index !== -1) this._pins.splice(index, 1);
       for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
-      this._removePaper(pin);
       pin.element.style.visibility = '';
+      pin.element.style.opacity = '';
     }
     for (const pin of pins) await this._pin(pin.element, pin.options);
   }
@@ -144,7 +144,7 @@ clipForOffset(offset, width, height) {
     return true;
   }
 
-/** Shrink dots, fade the gradient map and fade the paper (0 = pattern, 1 = original). */
+/** Shrink dots, fade the gradient map and fade the image in over the paper (0 = pattern, 1 = original). */
   setDissolve(element, value) {
     const pin = this.get(element);
     if (!pin) return false;
@@ -162,40 +162,9 @@ clipForOffset(offset, width, height) {
       layer.surface.setGradientAmount(1 - t);
       layer.surface.setReveal(t >= 1 ? 0 : layer.alpha ?? 1);
     }
-    if (!pin.paper) return;
-    if (t <= 0) {
-      this._removePaper(pin);
-      pin.element.style.visibility = 'hidden';
-      return;
-    }
-    pin.element.style.visibility = '';
-    pin.element.style.opacity = '';
-    const paper = this._ensurePaper(pin);
-    if (paper) paper.style.opacity = String(1 - t);
-  }
-
-  _ensurePaper(pin) {
-    if (pin.paperEl?.isConnected) return pin.paperEl;
-    const parent = pin.element.parentElement;
-    if (!parent) return null;
-    if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
-    const paper = document.createElement('div');
-    paper.className = 'halftone-paper';
-    paper.setAttribute('aria-hidden', 'true');
-    paper.style.cssText = [
-      'position:absolute',
-      'inset:0',
-      'pointer-events:none',
-      `background:rgb(${pin.paper.map((v) => Math.round(v * 255)).join(' ')})`,
-    ].join(';');
-    parent.appendChild(paper);
-    pin.paperEl = paper;
-    return paper;
-  }
-
-  _removePaper(pin) {
-    pin.paperEl?.remove();
-    pin.paperEl = null;
+    if (!pin.colorMode) return;
+    pin.element.style.visibility = t > 0 ? '' : 'hidden';
+    pin.element.style.opacity = t > 0 && t < 1 ? String(t) : '';
   }
 
 /** Animate the top pattern layer offset. */
@@ -263,8 +232,8 @@ clipForOffset(offset, width, height) {
     if (index !== -1) this._pins.splice(index, 1);
     for (const tween of pin.tweens) this.overlay.cancelTween(tween);
     for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
-    this._removePaper(pin);
     pin.element.style.visibility = '';
+    pin.element.style.opacity = '';
     if (pin.element.parentElement) pin.element.parentElement.style.background = '';
     return this._pin(element, options);
   }
@@ -276,7 +245,6 @@ clipForOffset(offset, width, height) {
     const index = this._pins.indexOf(pin);
     if (index !== -1) this._pins.splice(index, 1);
     for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
-    this._removePaper(pin);
     try {
       await this._pin(pin.element, pin.options);
     } finally {
@@ -288,8 +256,8 @@ clipForOffset(offset, width, height) {
   unpinAll() {
     for (const pin of this._pins) {
       for (const tween of pin.tweens) this.overlay.cancelTween(tween);
-      this._removePaper(pin);
       pin.element.style.visibility = '';
+      pin.element.style.opacity = '';
       if (pin.element.parentElement) pin.element.parentElement.style.background = '';
       for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
     }
