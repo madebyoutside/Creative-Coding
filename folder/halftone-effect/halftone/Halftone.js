@@ -94,8 +94,8 @@ export class Halftone {
       this.pinController.sync();
       this.transitionController.invalidateSnapshot();
     };
-    this.overlay.onScroll = () => {
-      this.transitionController.onScroll();
+    this.overlay.onScroll = (event) => {
+      this.transitionController.onScroll(event);
       this.hoverController.syncRect();
       this.pinController.sync();
     };
@@ -132,8 +132,19 @@ export class Halftone {
     return this.hoverController?.prewarm();
   }
 
+/** Read the current page-transition speed multiplier. */
+  get transitionSpeed() {
+    return this.transitionController?.transitionSpeed ?? 1;
+  }
+
+/** Set the page-transition speed multiplier (higher is faster). */
+  setTransitionSpeed(value) {
+    return this.transitionController?.setSpeed(value) ?? 1;
+  }
+
 /** Update the base params and sync the active hover surface. */
   setParams(partial) {
+    this.transitionController?.invalidateSnapshot();
     this.params = normalizeParams(partial, this.params);
     this.hoverController?.applyParams();
     if (this.supported && !this.busy) void this.pinController?.refreshAll();
@@ -145,11 +156,38 @@ export class Halftone {
     return this.pinController?.pin(element, options);
   }
 
+/** Remove all live pinned patterns. */
+  unpinAll() {
+    this.pinController?.unpinAll();
+  }
+
 /** Replace a pinned image's complete config and rebuild it. */
   updatePin(element, options = {}) {
     if (this.overlay.destroyed || !this.supported || !element) return Promise.resolve(null);
     if (this.transitionController?.busy) return Promise.resolve(null);
+    this.transitionController?.invalidateSnapshot();
     return this.pinController.update(element, options);
+  }
+
+/** Fade a pinned image between the full pattern (1) and the original (0). */
+  setPinReveal(element, value) {
+    return this.pinController?.setReveal(element, value) ?? false;
+  }
+
+/** Dissolve a pinned image into its original (0 = pattern, 1 = original). */
+  setPinDissolve(element, value) {
+    return this.pinController?.setDissolve(element, value) ?? false;
+  }
+
+/** Run a tween on the overlay ticker. */
+  tween(spec) {
+    if (!this.supported || this.destroyed) return null;
+    return this.overlay.tween(spec);
+  }
+
+/** Stop a tween started with tween(). */
+  cancelTween(tween) {
+    this.overlay?.cancelTween(tween);
   }
 
 /** Read the live config for a pinned image. */
@@ -162,11 +200,12 @@ export class Halftone {
     this.pinController?.shiftPin(element, offset, duration);
   }
 
-/** Reposition baked pins and the active hover after layout changes. */
-  sync() {
+/** Reposition baked pins and the active hover; `immediate` renders this frame. */
+  sync({ immediate = false } = {}) {
     if (!this.supported || this.destroyed) return;
     this.pinController?.sync();
     this.hoverController?.syncRect();
+    if (immediate) this.overlay.renderNow();
     this.overlay.requestRender();
   }
 

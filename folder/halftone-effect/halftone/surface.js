@@ -181,6 +181,7 @@ export class Surface {
       meta[3] = gradient.scatter;
       meta2[0] = gradient.frequency;
       meta2[1] = gradient.offset;
+      meta2[2] = this.gradientAmount ?? 1;
       meta2[3] = 1;
     } else {
       meta[0] = 0;
@@ -202,6 +203,12 @@ export class Surface {
   setReveal(value) {
     this.reveal = value;
     this.uniforms.uniforms.p1[3] = value;
+  }
+
+/** Mix between the raw halftone (0) and the gradient map (1). */
+  setGradientAmount(value) {
+    this.gradientAmount = Math.max(0, Math.min(1, value));
+    this.uniforms.uniforms.gmeta2[2] = this.gradientAmount;
   }
 
 /** Override the dot radius multiplier. */
