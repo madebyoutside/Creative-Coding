@@ -466,7 +466,7 @@ async function initPage() {
 
   // Populate images from photos dictionary
   for (const img of document.querySelectorAll("img[data-photo]")) {
-    img.src = photos[img.dataset.photo] ?? photos.a;
+    if (!img.getAttribute("src")) img.src = photos[img.dataset.photo] ?? photos.a;
   }
 
   // Ensure all images are decoded before taking any transition snapshot
@@ -608,10 +608,11 @@ async function start() {
   fontStyle.textContent = `@font-face { font-family: 'Brut Grotesque'; src: url("${fontUrl}") format('opentype'); font-weight: 500; font-display: swap; }`;
   document.head.appendChild(fontStyle);
 
+  const halftoneModule = import("./halftone/index.js");
   await document.fonts.ready;
 
   try {
-    const { createHalftone } = await import("./halftone/index.js");
+    const { createHalftone } = await halftoneModule;
     halftone = await createHalftone({
       params: {
         dotSize: 4,

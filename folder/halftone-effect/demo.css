@@ -248,6 +248,11 @@ body {
   aspect-ratio: 447 / 566;
 }
 
+/* Hide alt text while the image is still loading. */
+img[data-photo] {
+  color: transparent;
+}
+
 .fx-frame img {
   display: block;
   width: 100%;
