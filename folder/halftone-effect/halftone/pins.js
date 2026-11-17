@@ -7,6 +7,30 @@ const viewportFit = (element) => {
   return { rect, fit: computeFit(element, rect) };
 };
 
+/** Intersect the rects of every ancestor that clips overflow. */
+const clipBounds = (element) => {
+  const bounds = { left: -Infinity, top: -Infinity, right: Infinity, bottom: Infinity };
+  for (let node = element.parentElement; node && node !== document.body; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+    const rect = node.getBoundingClientRect();
+    bounds.left = Math.max(bounds.left, rect.left);
+    bounds.top = Math.max(bounds.top, rect.top);
+    bounds.right = Math.min(bounds.right, rect.right);
+    bounds.bottom = Math.min(bounds.bottom, rect.bottom);
+  }
+  return bounds;
+};
+
+/** Narrow a normalized [x, y, w, h] clip to screen bounds for a surface at x, y. */
+const clipTo = (clip, bounds, x, y, width, height) => {
+  const left = Math.max(clip[0], (bounds.left - x) / width);
+  const top = Math.max(clip[1], (bounds.top - y) / height);
+  const right = Math.min(clip[0] + clip[2], (bounds.right - x) / width);
+  const bottom = Math.min(clip[1] + clip[3], (bounds.bottom - y) / height);
+  return [left, top, Math.max(0, right - left), Math.max(0, bottom - top)];
+};
+
 /** Draws halftone layers directly onto the single overlay canvas. */
 export class PinController {
   constructor({ overlay, getParams }) {
@@ -91,14 +115,15 @@ export class PinController {
       if (blend !== 'normal') surface.sprite.blendMode = blend;
       this.overlay.patternLayer.addChild(surface.sprite);
       const record = this.overlay.trackSurface(surface, blurEntry);
-      const layer = { surface, record, offset: [...offset], params: layerParams, alpha };
+      const clip = spec.clip ?? options.clip ?? [0, 0, 1, 1];
+      const layer = { surface, record, offset: [...offset], params: layerParams, alpha, clip };
       pin.layers.push(layer);
       pin.top = layer;
-      if (index === specs.length - 1) surface.setClip(this.clipForOffset(offset, fit.dw, fit.dh));
     }
 
     if (!pin.layers.length) return null;
-    pin.paper = pattern.on === 'color' ? pattern.paper : null;
+    this._place(pin, rect, fit);
+    pin.colorMode = pattern.on === 'color';
     pin.dissolve = 0;
     this._pins.push(pin);
     const dissolve = this._dissolve.get(element) ?? 0;
@@ -126,8 +151,8 @@ clipForOffset(offset, width, height) {
       const index = this._pins.indexOf(pin);
       if (index !== -1) this._pins.splice(index, 1);
       for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
-      this._removePaper(pin);
       pin.element.style.visibility = '';
+      pin.element.style.opacity = '';
     }
     for (const pin of pins) await this._pin(pin.element, pin.options);
   }
@@ -144,7 +169,7 @@ clipForOffset(offset, width, height) {
     return true;
   }
 
-/** Shrink dots, fade the gradient map and fade the paper (0 = pattern, 1 = original). */
+/** Shrink dots, fade the gradient map and fade the image in over the paper (0 = pattern, 1 = original). */
   setDissolve(element, value) {
     const pin = this.get(element);
     if (!pin) return false;
@@ -162,40 +187,9 @@ clipForOffset(offset, width, height) {
       layer.surface.setGradientAmount(1 - t);
       layer.surface.setReveal(t >= 1 ? 0 : layer.alpha ?? 1);
     }
-    if (!pin.paper) return;
-    if (t <= 0) {
-      this._removePaper(pin);
-      pin.element.style.visibility = 'hidden';
-      return;
-    }
-    pin.element.style.visibility = '';
-    pin.element.style.opacity = '';
-    const paper = this._ensurePaper(pin);
-    if (paper) paper.style.opacity = String(1 - t);
-  }
-
-  _ensurePaper(pin) {
-    if (pin.paperEl?.isConnected) return pin.paperEl;
-    const parent = pin.element.parentElement;
-    if (!parent) return null;
-    if (getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
-    const paper = document.createElement('div');
-    paper.className = 'halftone-paper';
-    paper.setAttribute('aria-hidden', 'true');
-    paper.style.cssText = [
-      'position:absolute',
-      'inset:0',
-      'pointer-events:none',
-      `background:rgb(${pin.paper.map((v) => Math.round(v * 255)).join(' ')})`,
-    ].join(';');
-    parent.appendChild(paper);
-    pin.paperEl = paper;
-    return paper;
-  }
-
-  _removePaper(pin) {
-    pin.paperEl?.remove();
-    pin.paperEl = null;
+    if (!pin.colorMode) return;
+    pin.element.style.visibility = t > 0 ? '' : 'hidden';
+    pin.element.style.opacity = t > 0 && t < 1 ? String(t) : '';
   }
 
 /** Animate the top pattern layer offset. */
@@ -237,17 +231,25 @@ clipForOffset(offset, width, height) {
         continue;
       }
       const { rect, fit } = viewportFit(pin.element);
-      pin.rect = rect;
-      pin.fit = fit;
-      for (const layer of pin.layers) {
-        if (layer.record.destroyed) continue;
-        const [ox, oy] = layer.offset;
-        layer.surface.setPosition(rect.left + fit.dx + ox, rect.top + fit.dy + oy);
-        layer.surface.setSize(fit.dw, fit.dh);
-        if (layer === pin.top) layer.surface.setClip(this.clipForOffset(layer.offset, fit.dw, fit.dh));
-      }
+      this._place(pin, rect, fit);
     }
     this.overlay.requestRender();
+  }
+
+  _place(pin, rect, fit) {
+    pin.rect = rect;
+    pin.fit = fit;
+    const bounds = clipBounds(pin.element);
+    for (const layer of pin.layers) {
+      if (layer.record.destroyed) continue;
+      const [ox, oy] = layer.offset;
+      const x = rect.left + fit.dx + ox;
+      const y = rect.top + fit.dy + oy;
+      layer.surface.setPosition(x, y);
+      layer.surface.setSize(fit.dw, fit.dh);
+      const clip = layer === pin.top ? this.clipForOffset(layer.offset, fit.dw, fit.dh) : layer.clip;
+      layer.surface.setClip(clipTo(clip, bounds, x, y, fit.dw, fit.dh));
+    }
   }
 
   /** Return the live pin for an element. */
@@ -263,8 +265,8 @@ clipForOffset(offset, width, height) {
     if (index !== -1) this._pins.splice(index, 1);
     for (const tween of pin.tweens) this.overlay.cancelTween(tween);
     for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
-    this._removePaper(pin);
     pin.element.style.visibility = '';
+    pin.element.style.opacity = '';
     if (pin.element.parentElement) pin.element.parentElement.style.background = '';
     return this._pin(element, options);
   }
@@ -276,7 +278,6 @@ clipForOffset(offset, width, height) {
     const index = this._pins.indexOf(pin);
     if (index !== -1) this._pins.splice(index, 1);
     for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
-    this._removePaper(pin);
     try {
       await this._pin(pin.element, pin.options);
     } finally {
@@ -288,8 +289,8 @@ clipForOffset(offset, width, height) {
   unpinAll() {
     for (const pin of this._pins) {
       for (const tween of pin.tweens) this.overlay.cancelTween(tween);
-      this._removePaper(pin);
       pin.element.style.visibility = '';
+      pin.element.style.opacity = '';
       if (pin.element.parentElement) pin.element.parentElement.style.background = '';
       for (const layer of pin.layers) this.overlay.destroyRecord(layer.record);
     }

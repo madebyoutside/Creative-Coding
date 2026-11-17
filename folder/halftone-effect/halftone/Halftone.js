@@ -142,6 +142,16 @@ export class Halftone {
     return this.transitionController?.setSpeed(value) ?? 1;
   }
 
+/** Read the page-transition style ('crossfade' or 'ripple'). */
+  get transitionStyle() {
+    return this.transitionController?.style ?? 'crossfade';
+  }
+
+/** Switch the page-transition style. */
+  setTransitionStyle(value) {
+    return this.transitionController?.setStyle(value) ?? 'crossfade';
+  }
+
 /** Update the base params and sync the active hover surface. */
   setParams(partial) {
     this.transitionController?.invalidateSnapshot();

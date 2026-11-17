@@ -16,6 +16,9 @@ const SWAP_MS = 120;
 const CROSSFADE_MS = 1400;
 const RESOLVE_MS = 700;
 const INCOMING_TIMEOUT_MS = 1500;
+const RIPPLE_MS = 1500;
+const RIPPLE_LAG_MS = 260;
+export const TRANSITION_STYLES = ['crossfade', 'ripple'];
 
 /** Snapshot page transition: outgoing hold, incoming crossfade, cache. */
 export class TransitionController {
@@ -39,6 +42,7 @@ export class TransitionController {
     this._transitioning = false;
     this.lastTransition = null;
     this.speed = 1;
+    this.style = 'crossfade';
   }
 
   get transitionSpeed() {
@@ -48,6 +52,11 @@ export class TransitionController {
   setSpeed(value) {
     this.speed = Math.min(4, Math.max(0.25, Number(value) || 1));
     return this.speed;
+  }
+
+  setStyle(value) {
+    if (TRANSITION_STYLES.includes(value)) this.style = value;
+    return this.style;
   }
 
   get busy() {
@@ -186,6 +195,8 @@ export class TransitionController {
 
     this._transitioning = true;
     const speed = this.speed;
+    const ripple = this.style === 'ripple';
+    const origin = options.origin ?? [0.5, 0.5];
     const ms = (value) => Math.max(0, Math.round(value / speed));
     this.overlay.setCanvasBlend('normal');
     if (this.overlay.patternLayer) this.overlay.patternLayer.visible = false;
@@ -326,9 +337,16 @@ export class TransitionController {
           params: incomingParams,
         });
         inRecord = this.overlay.trackSurface(inSurface, inBlur);
-        inSurface.setReveal(0);
         inSurface.setDotScale(incomingParams.dotScale);
-        this.overlay.transitionLayer.addChildAt(inSurface.sprite, 1);
+        if (ripple) {
+          inSurface.setReveal(1);
+          inSurface.setSweep(origin, 0, 2);
+          outSurface.setSweep(origin, 0, 1);
+          this.overlay.transitionLayer.addChild(inSurface.sprite);
+        } else {
+          inSurface.setReveal(0);
+          this.overlay.transitionLayer.addChildAt(inSurface.sprite, 1);
+        }
 
         // The incoming page snapshot already contains the live pattern layer.
         // Fade that exact image over the halftone before swapping to the real
@@ -340,27 +358,52 @@ export class TransitionController {
         this.overlay.transitionLayer.addChild(realSurface);
         this.overlay.requestRender();
 
-        this.overlay.tween({
-          from: 1,
-          to: 0,
-          duration: ms(CROSSFADE_MS),
-          ease: easeInOutCubic,
-          onUpdate: (value) => {
-            if (!outRecord.destroyed) outSurface.setReveal(value);
-          },
-        });
-        this.overlay.tween({
-          from: 0,
-          to: 1,
-          duration: ms(CROSSFADE_MS),
-          ease: easeInOutCubic,
-          onUpdate: (value) => {
-            if (!inRecord.destroyed) inSurface.setReveal(value);
-          },
-        });
-
-        await this.overlay.wait(ms(CROSSFADE_MS));
-        if (this.overlay.destroyed) return false;
+        if (ripple) {
+          this.overlay.tween({
+            from: 0,
+            to: 1,
+            duration: ms(RIPPLE_MS),
+            ease: easeInOutCubic,
+            onUpdate: (value) => {
+              if (!outRecord.destroyed) outSurface.setSweep(origin, value, 1);
+            },
+          });
+          await this.overlay.wait(ms(RIPPLE_LAG_MS));
+          if (this.overlay.destroyed) return false;
+          this.overlay.tween({
+            from: 0,
+            to: 1,
+            duration: ms(RIPPLE_MS),
+            ease: easeInOutCubic,
+            onUpdate: (value) => {
+              if (!inRecord.destroyed) inSurface.setSweep(origin, value, 2);
+            },
+          });
+          await this.overlay.wait(ms(RIPPLE_MS));
+          if (this.overlay.destroyed) return false;
+          if (!outRecord.destroyed) outSurface.setReveal(0);
+        } else {
+          this.overlay.tween({
+            from: 1,
+            to: 0,
+            duration: ms(CROSSFADE_MS),
+            ease: easeInOutCubic,
+            onUpdate: (value) => {
+              if (!outRecord.destroyed) outSurface.setReveal(value);
+            },
+          });
+          this.overlay.tween({
+            from: 0,
+            to: 1,
+            duration: ms(CROSSFADE_MS),
+            ease: easeInOutCubic,
+            onUpdate: (value) => {
+              if (!inRecord.destroyed) inSurface.setReveal(value);
+            },
+          });
+          await this.overlay.wait(ms(CROSSFADE_MS));
+          if (this.overlay.destroyed) return false;
+        }
 
         this.overlay.tween({
           from: 1,
@@ -429,6 +472,7 @@ export class TransitionController {
       }
       this.lastTransition = {
         mode: "snapshot",
+        style: this.style,
         incoming: !!incoming,
         incomingMs: debugIncomingMs,
         totalMs: performance.now() - debugStart,

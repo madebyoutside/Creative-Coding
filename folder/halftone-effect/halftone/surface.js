@@ -217,6 +217,15 @@ export class Surface {
     this.uniforms.uniforms.p0[1] = value;
   }
 
+/** Drive the radial dot sweep (mode 0 off, 1 shrink, 2 grow). */
+  setSweep(origin, progress, mode) {
+    const sweep = this.uniforms.uniforms.sweep;
+    sweep[0] = origin[0];
+    sweep[1] = origin[1];
+    sweep[2] = progress;
+    sweep[3] = mode;
+  }
+
 /** Move the surface in CSS pixels. */
   setPosition(x, y) {
     this.sprite.position.set(x, y);

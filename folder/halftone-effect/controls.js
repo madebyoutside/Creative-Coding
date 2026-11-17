@@ -87,8 +87,9 @@ export function setupControls(api, first) {
 
     <section class="ctl-group">
       <h3>Page transition</h3>
+      ${select("c-transition-style", "Effect", [["crossfade", "Crossfade"], ["ripple", "Ripple"]], api.transitionStyle ?? "crossfade")}
       ${range("c-transition-speed", "Speed", 0.25, 3, 0.05, api.transitionSpeed ?? 1, "×")}
-      <p class="ctl-hint">Higher is faster. Applies to both pages.</p>
+      <p class="ctl-hint">Ripple shrinks the old dots and grows the new ones outward from the clicked link. Higher speed is faster.</p>
     </section>
 
     <section class="ctl-group">
@@ -168,6 +169,7 @@ export function setupControls(api, first) {
   bindRange("c-scatter", "%", (v) => { gradient.scatter = v; applyGradient(); });
   bindRange("c-offset", "%", (v) => { gradient.offset = v; applyGradient(); });
   bindRange("c-frequency", "", (v) => { gradient.frequency = v; applyGradient(); });
+  $("c-transition-style").addEventListener("change", () => { api.setTransitionStyle($("c-transition-style").value); });
   bindRange("c-transition-speed", "×", (v) => { api.setTransitionSpeed(v); });
   bindRange("c-scroll-hold", "s", (v) => { api.setScrollRevealTiming({ hold: v }); });
   bindRange("c-scroll-fade", "s", (v) => { api.setScrollRevealTiming({ fade: v }); });

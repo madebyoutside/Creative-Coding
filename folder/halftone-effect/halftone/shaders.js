@@ -24,6 +24,7 @@ struct HalftoneUniforms {
   positions: array<f32, 8>,
   gmeta: vec4<f32>,  // count, mixSpace, repeat, scatter
   gmeta2: vec4<f32>, // frequency, offset, amount (0 = raw, 1 = mapped), enabled
+  sweep: vec4<f32>,  // origin x, origin y, progress, mode (0 off, 1 shrink, 2 grow)
 };
 
 @group(0) @binding(0) var<uniform> gfu: GlobalFilterUniforms;
@@ -112,6 +113,22 @@ fn sampleBlur(p: vec2<f32>, dims: vec2<f32>) -> vec4<f32> {
   return c;
 }
 
+fn sweepProgress(p: vec2<f32>, dims: vec2<f32>) -> f32 {
+  let s = halftoneUniforms.sweep;
+  let o = s.xy * dims;
+  let far = max(max(length(o), length(o - vec2<f32>(dims.x, 0.0))), max(length(o - vec2<f32>(0.0, dims.y)), length(o - dims)));
+  let jitter = fract(sin(dot(floor(p), vec2<f32>(12.9898, 78.233))) * 43758.5453) - 0.5;
+  let f = length(p - o) / max(far, 1.0) + jitter * 0.12;
+  let k = smoothstep(0.0, 1.0, clamp((s.z * 1.44 - 0.22 - f) / 0.16, 0.0, 1.0));
+  return select(1.0 - k, k, s.w > 1.5);
+}
+
+fn sweepScale(p: vec2<f32>, dims: vec2<f32>) -> f32 {
+  if (halftoneUniforms.sweep.w < 0.5) { return 1.0; }
+  let k = sweepProgress(p, dims);
+  return k + sin(k * 3.14159265) * 0.35;
+}
+
 // One ink amount per dot centre; the dot screen samples all nine neighbours.
 fn cellInk(cell: vec2<f32>, theta: f32, center: vec2<f32>, dotSize: f32, dims: vec2<f32>) -> vec4<f32> {
   let c = sampleBlur(gridToLocalPos(cell, theta, center, dotSize), dims);
@@ -134,7 +151,7 @@ fn dotScreen(lp: vec2<f32>, theta: f32, mask: vec4<f32>, center: vec2<f32>, dotS
   for (var oy = -1; oy <= 1; oy = oy + 1) {
     for (var ox = -1; ox <= 1; ox = ox + 1) {
       let cc = base + vec2<f32>(f32(ox), f32(oy));
-      let r = dotRadius(dot(cellInk(cc, theta, center, dotSize, dims), mask)) * dotScale;
+      let r = dotRadius(dot(cellInk(cc, theta, center, dotSize, dims), mask)) * dotScale * sweepScale(gridToLocalPos(cc, theta, center, dotSize), dims);
       sum = sum + edgeMask(r * (1.0 + softness), r * (1.0 - softness) - 0.001, length(g - cc));
     }
   }
@@ -227,6 +244,7 @@ fn mainFragment(@location(0) local: vec2<f32>) -> @location(0) vec4<f32> {
   }
   let dotSize = max(halftoneUniforms.p0.x, 0.0001);
   let dotScale = max(halftoneUniforms.p0.y, 0.0);
+  let pixelScale = dotScale * sweepScale(designPos, dims);
   let softness = clamp(halftoneUniforms.p0.z, 0.0, 1.0);
   let rotation = halftoneUniforms.p0.w;
   let center = vec2<f32>(
@@ -267,7 +285,7 @@ fn mainFragment(@location(0) local: vec2<f32>) -> @location(0) vec4<f32> {
     let b = sampleBlur(designPos, dims);
     let avg = s2l3(b.rgb);
     if (colorMode == 0) {
-      let k = rgbToCmyk(mix(vec3<f32>(1.0), avg, inAlpha)) * dotScale;
+      let k = rgbToCmyk(mix(vec3<f32>(1.0), avg, inAlpha)) * pixelScale;
       color = cmykToRgb(vec4<f32>(
         euclid(k.x, designPos, rotation + a15, center, dotSize, softness),
         euclid(k.y, designPos, rotation + a75, center, dotSize, softness),
@@ -275,14 +293,14 @@ fn mainFragment(@location(0) local: vec2<f32>) -> @location(0) vec4<f32> {
         euclid(k.w, designPos, rotation + a45, center, dotSize, softness)
       ));
     } else if (colorMode == 1) {
-      let v = avg * inAlpha * dotScale;
+      let v = avg * inAlpha * pixelScale;
       color = vec3<f32>(
         euclid(v.x, designPos, rotation + a15, center, dotSize, softness),
         euclid(v.y, designPos, rotation + a75, center, dotSize, softness),
         euclid(v.z, designPos, rotation,       center, dotSize, softness)
       );
     } else {
-      let l = clamp(s2l(dot(b.rgb, vec3<f32>(0.299, 0.587, 0.114))) * inAlpha * dotScale, 0.0, 1.0);
+      let l = clamp(s2l(dot(b.rgb, vec3<f32>(0.299, 0.587, 0.114))) * inAlpha * pixelScale, 0.0, 1.0);
       if (colorMode == 2) {
         color = vec3<f32>(1.0 - euclid(1.0 - l, designPos, rotation + a45, center, dotSize, softness));
       } else {
@@ -293,6 +311,8 @@ fn mainFragment(@location(0) local: vec2<f32>) -> @location(0) vec4<f32> {
 
   var outAlpha = reveal;
   if (halftoneUniforms.p2.y > 0.5) { outAlpha = outAlpha * inAlpha; }
+  // Only paint this layer's side of the sweep front so the other layer shows through.
+  if (halftoneUniforms.sweep.w > 0.5) { outAlpha = outAlpha * min(1.0, sweepProgress(designPos, dims) * 8.0); }
 
   if (halftoneUniforms.gmeta2.w > 0.5 && halftoneUniforms.gmeta.x > 0.5) {
     let luma = clamp(dot(l2s3(color), vec3<f32>(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
@@ -359,6 +379,7 @@ uniform vec4 colors[8];
 uniform float positions[8];
 uniform vec4 gmeta;
 uniform vec4 gmeta2;
+uniform vec4 sweep;
 
 const float INV_PI = 0.31830988618;
 const float TAU = 6.28318530718;
@@ -416,6 +437,21 @@ vec4 cellInk(vec2 cell, float theta, vec2 center, float dotSize, vec2 dims) {
   return vec4(l * c.a);
 }
 
+float sweepProgress(vec2 p, vec2 dims) {
+  vec2 o = sweep.xy * dims;
+  float far = max(max(length(o), length(o - vec2(dims.x, 0.0))), max(length(o - vec2(0.0, dims.y)), length(o - dims)));
+  float jitter = fract(sin(dot(floor(p), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+  float f = length(p - o) / max(far, 1.0) + jitter * 0.12;
+  float k = smoothstep(0.0, 1.0, clamp((sweep.z * 1.44 - 0.22 - f) / 0.16, 0.0, 1.0));
+  return sweep.w > 1.5 ? k : 1.0 - k;
+}
+
+float sweepScale(vec2 p, vec2 dims) {
+  if (sweep.w < 0.5) return 1.0;
+  float k = sweepProgress(p, dims);
+  return k + sin(k * 3.14159265) * 0.35;
+}
+
 float dotScreen(vec2 lp, float theta, vec4 mask, vec2 center, float dotSize, vec2 dims, float softness, float dotScale) {
   vec2 g = localPosToGrid(lp, theta, center, dotSize);
   vec2 base = floor(g + vec2(0.5));
@@ -423,7 +459,7 @@ float dotScreen(vec2 lp, float theta, vec4 mask, vec2 center, float dotSize, vec
   for (int oy = -1; oy <= 1; oy++) {
     for (int ox = -1; ox <= 1; ox++) {
       vec2 cc = base + vec2(float(ox), float(oy));
-      float r = dotRadius(dot(cellInk(cc, theta, center, dotSize, dims), mask)) * dotScale;
+      float r = dotRadius(dot(cellInk(cc, theta, center, dotSize, dims), mask)) * dotScale * sweepScale(gridToLocalPos(cc, theta, center, dotSize), dims);
       sum += edgeMask(r * (1.0 + softness), r * (1.0 - softness) - 0.001, length(g - cc));
     }
   }
@@ -511,6 +547,7 @@ void main() {
   }
   float dotSize = max(p0.x, 0.0001);
   float dotScale = max(p0.y, 0.0);
+  float pixelScale = dotScale * sweepScale(designPos, dims);
   float softness = clamp(p0.z, 0.0, 1.0);
   float rotation = p0.w;
   vec2 center = clamp(p1.xy, vec2(0.0), vec2(1.0)) * dims;
@@ -548,7 +585,7 @@ void main() {
     vec4 b = sampleBlur(designPos, dims);
     vec3 avg = s2l3(b.rgb);
     if (colorMode == 0) {
-      vec4 k = rgbToCmyk(mix(vec3(1.0), avg, inAlpha)) * dotScale;
+      vec4 k = rgbToCmyk(mix(vec3(1.0), avg, inAlpha)) * pixelScale;
       color = cmykToRgb(vec4(
         euclid(k.x, designPos, rotation + a15, center, dotSize, softness),
         euclid(k.y, designPos, rotation + a75, center, dotSize, softness),
@@ -556,14 +593,14 @@ void main() {
         euclid(k.w, designPos, rotation + a45, center, dotSize, softness)
       ));
     } else if (colorMode == 1) {
-      vec3 v = avg * inAlpha * dotScale;
+      vec3 v = avg * inAlpha * pixelScale;
       color = vec3(
         euclid(v.x, designPos, rotation + a15, center, dotSize, softness),
         euclid(v.y, designPos, rotation + a75, center, dotSize, softness),
         euclid(v.z, designPos, rotation,       center, dotSize, softness)
       );
     } else {
-      float l = clamp(s2l(dot(b.rgb, vec3(0.299, 0.587, 0.114))) * inAlpha * dotScale, 0.0, 1.0);
+      float l = clamp(s2l(dot(b.rgb, vec3(0.299, 0.587, 0.114))) * inAlpha * pixelScale, 0.0, 1.0);
       if (colorMode == 2) color = vec3(1.0 - euclid(1.0 - l, designPos, rotation + a45, center, dotSize, softness));
       else color = vec3(euclid(l, designPos, rotation + a45, center, dotSize, softness));
     }
@@ -571,6 +608,7 @@ void main() {
 
   float outAlpha = reveal;
   if (p2.y > 0.5) outAlpha *= inAlpha;
+  if (sweep.w > 0.5) outAlpha *= min(1.0, sweepProgress(designPos, dims) * 8.0);
 
   if (gmeta2.w > 0.5 && gmeta.x > 0.5) {
     float luma = clamp(dot(l2s3(color), vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
@@ -720,6 +758,7 @@ export function createUniformGroup() {
     positions: { value: new Float32Array(8), type: 'f32', size: 8 },
     gmeta: { value: new Float32Array([0, 0, 0, 0]), type: 'vec4<f32>' },
     gmeta2: { value: new Float32Array([2, 0, 1, 0]), type: 'vec4<f32>' },
+    sweep: { value: new Float32Array([0.5, 0.5, 0, 0]), type: 'vec4<f32>' },
   });
 }
 

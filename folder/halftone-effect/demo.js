@@ -9,6 +9,7 @@ const photos = { a: photo2, e: photo5 };
 
 let halftone = null;
 let swup = null;
+let transitionOrigin = null;
 let scrollRevealCleanup = null;
 let scrollRevealRefresh = null;
 let scrollRevealUpdate = null;
@@ -381,6 +382,14 @@ window.__demo = {
     return halftone?.setTransitionSpeed?.(value) ?? value;
   },
 
+  get transitionStyle() {
+    return halftone?.transitionStyle ?? "crossfade";
+  },
+
+  setTransitionStyle(value) {
+    return halftone?.setTransitionStyle?.(value) ?? value;
+  },
+
   get scrollRevealHold() {
     return scrollRevealTiming.hold / 1000;
   },
@@ -466,7 +475,7 @@ async function initPage() {
 
   // Populate images from photos dictionary
   for (const img of document.querySelectorAll("img[data-photo]")) {
-    img.src = photos[img.dataset.photo] ?? photos.a;
+    if (!img.getAttribute("src")) img.src = photos[img.dataset.photo] ?? photos.a;
   }
 
   // Ensure all images are decoded before taking any transition snapshot
@@ -520,7 +529,12 @@ function setupSwup() {
     if (halftone?.busy) {
       visit.ignored = true;
       event.preventDefault();
+      return;
     }
+    const rect = event.target.closest?.("a")?.getBoundingClientRect();
+    const x = event.clientX || (rect ? rect.left + rect.width / 2 : 0);
+    const y = event.clientY || (rect ? rect.top + rect.height / 2 : 0);
+    transitionOrigin = [x / window.innerWidth, y / window.innerHeight];
   });
 
   swup.hooks.on("visit:start", (visit) => {
@@ -552,6 +566,8 @@ function setupSwup() {
       }
 
       const doc = visit.to.document;
+      const origin = transitionOrigin ?? [0.5, 0.5];
+      transitionOrigin = null;
 
       await halftone.transition(
         async () => {
@@ -572,6 +588,7 @@ function setupSwup() {
           await initPage();
         },
         {
+          origin,
           outgoingParams: {
             gradient: { dark: "#82C1C0", light: "#FFFFFF" },
           },
@@ -608,10 +625,11 @@ async function start() {
   fontStyle.textContent = `@font-face { font-family: 'Brut Grotesque'; src: url("${fontUrl}") format('opentype'); font-weight: 500; font-display: swap; }`;
   document.head.appendChild(fontStyle);
 
+  const halftoneModule = import("./halftone/index.js");
   await document.fonts.ready;
 
   try {
-    const { createHalftone } = await import("./halftone/index.js");
+    const { createHalftone } = await halftoneModule;
     halftone = await createHalftone({
       params: {
         dotSize: 4,
