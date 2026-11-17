@@ -21,7 +21,22 @@ body {
 }
 
 .page {
+  position: relative;
   padding: 10vh 7vw 40vh;
+}
+
+/* Image behind the heading: taken out of the flow, fills the first screen under the letters */
+.under-image {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  object-fit: cover;
+}
+
+.page h1 {
+  position: relative; 
 }
 
 h1 {
