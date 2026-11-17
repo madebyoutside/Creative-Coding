@@ -1,13 +1,14 @@
 const TILE = 256; // size of the fill texture tile in px, repeated across the text
-const EDGE_TILE = 128; // size of the edge noise tile in px 
+const EDGE_TILE = 256; // size of the edge noise tile in px
 
 // draw tiles at the screen's real resolution, so they don't look blurry
 const density = window.devicePixelRatio || 1;
 
 const form = document.querySelector('.controls');
 const edge = {
+  spread: document.querySelector('#rough-edge .spread'), // feGaussianBlur on the letter shape
   noise: document.querySelector('#rough-edge .noise'), // feImage
-  scatter: document.querySelector('#rough-edge .scatter'), // feDisplacementMap
+  ink: document.querySelector('#rough-edge .ink'), // feFlood, the colour of the blobs
   soften: document.querySelector('#rough-edge .soften'), // feGaussianBlur
 };
 
@@ -67,6 +68,8 @@ function noise(size, radius) {
   return even;
 }
 
+let tileUrl = ''; 
+
 // Draw the grain tile and show it through the letters
 function makeTile() {
   const size = Math.round(TILE * density);
@@ -94,7 +97,13 @@ function makeTile() {
   }
   context.putImageData(image, 0, 0);
 
-  document.documentElement.style.setProperty('--fill', `url(${canvas.toDataURL()})`);
+  // Save the tile as a file in memory and pass a short link to it (blob:...) to the CSS.
+  // Set on <html> so every .fill-text on the page can use it
+  canvas.toBlob((file) => {
+    URL.revokeObjectURL(tileUrl); // free the last tile
+    tileUrl = URL.createObjectURL(file);
+    document.documentElement.style.setProperty('--fill', `url(${tileUrl})`);
+  });
 }
 
 // Wait until a slider pauses before redrawing, so dragging stays smooth
@@ -107,29 +116,29 @@ function makeTileSoon() {
 
 // ---------- Rough edge ----------
 
-// Random noise, a new value every Size px. Red and green are picked separately so pixels
-// scatter in every direction, not just along a diagonal
+// Blobby noise: random noise blurred into blobs the size of Edge size, in red. Squeezed to
+// 0–0.95 so the solid middle of the letters always beats it and never gets holes
 function makeEdgeNoise() {
   const size = Math.round(EDGE_TILE * density);
-  const dot = Math.max(1, Math.round(settings.edgeSize * density));
+  const values = noise(size, (settings.edgeSize * density) / 2);
+
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const context = canvas.getContext('2d');
-  for (let y = 0; y < size; y += dot) {
-    for (let x = 0; x < size; x += dot) {
-      const r = Math.floor(Math.random() * 256);
-      const g = Math.floor(Math.random() * 256);
-      context.fillStyle = `rgb(${r},${g},128)`;
-      context.fillRect(x, y, dot, dot);
-    }
+  const image = context.createImageData(size, size);
+  for (let i = 0; i < size * size; i++) {
+    image.data[i * 4] = values[i] * 0.95 * 255;
+    image.data[i * 4 + 3] = 255;
   }
+  context.putImageData(image, 0, 0);
   edge.noise.setAttribute('href', canvas.toDataURL());
 }
 
-// Feed the settings into the SVG filter. The displacement moves pixels up to half its
-// scale either way, so scale is twice the radius
+// Feed the settings into the SVG filter. A wider blur on the letter shape gives a wider
+// band where the blobs break in and out
 function updateEdge() {
-  edge.scatter.setAttribute('scale', settings.edgeRadius * 2);
+  edge.spread.setAttribute('stdDeviation', settings.edgeRadius);
+  edge.ink.setAttribute('flood-color', settings.ink);
   edge.soften.setAttribute('stdDeviation', settings.edgeBlur);
 }
 
@@ -177,6 +186,7 @@ form.addEventListener('input', (event) => {
   } else if (name.startsWith('edge')) {
     updateEdge(); // the edge is a live SVG filter, no redraw needed
   } else {
+    updateEdge(); // the blobs follow the ink colour
     makeTileSoon();
   }
 });
