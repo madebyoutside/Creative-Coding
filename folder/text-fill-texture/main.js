@@ -11,6 +11,9 @@ const edge = {
   soften: document.querySelector('#rough-edge .soften'), // feGaussianBlur
 };
 
+const underImage = document.querySelector('.under-image');
+const defaultImage = underImage.src;
+
 let settings;
 
 const lerp = (a, b, t) => a + (b - a) * t; // blend two numbers
@@ -131,6 +134,17 @@ function updateEdge() {
 }
 
 
+// ---------- Image under the text ----------
+
+// Show the picked file in place of the default image
+function showImage(file) {
+  if (underImage.src.startsWith('blob:')) {
+    URL.revokeObjectURL(underImage.src); // free the last picked file
+  }
+  underImage.src = file ? URL.createObjectURL(file) : defaultImage;
+}
+
+
 // ---------- Settings panel ----------
 
 // Read every input in the form, turning number values into numbers
@@ -156,7 +170,9 @@ function drawAll() {
 form.addEventListener('input', (event) => {
   readSettings();
   const name = event.target.name;
-  if (name === 'edgeSize') {
+  if (name === 'image') {
+    showImage(event.target.files[0]);
+  } else if (name === 'edgeSize') {
     makeEdgeNoise();
   } else if (name.startsWith('edge')) {
     updateEdge(); // the edge is a live SVG filter, no redraw needed
@@ -165,7 +181,10 @@ form.addEventListener('input', (event) => {
   }
 });
 
-form.addEventListener('reset', () => setTimeout(drawAll)); // wait for the form to reset its values first
+form.addEventListener('reset', () => {
+  showImage(null);
+  setTimeout(drawAll); // wait for the form to reset its values first
+});
 form.querySelector('.regenerate').addEventListener('click', drawAll);
 
 drawAll();
