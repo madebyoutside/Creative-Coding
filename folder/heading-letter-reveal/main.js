@@ -4,6 +4,7 @@ import 'lenis/dist/lenis.css';
 import { shuffle, breakLines } from '../effects-on-text-no-canvas/text-effect.js';
 import { play as playLetters } from './letter-reveal.js';
 import { play as playWords } from './word-reveal.js';
+import { play as playShift } from './shift-reveal.js';
 
 const lenis = new Lenis({
   autoRaf: true,
@@ -49,3 +50,4 @@ function connect(form, heading, play) {
 
 connect(document.querySelector('.letter-controls'), document.querySelector('.letter-reveal'), playLetters);
 connect(document.querySelector('.word-controls'), document.querySelector('.word-reveal'), playWords);
+connect(document.querySelector('.shift-controls'), document.querySelector('.shift-reveal'), playShift);

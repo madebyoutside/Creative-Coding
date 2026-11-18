@@ -16,6 +16,9 @@
   <p class="label">Test -2 · words in random order</p>
   <h2 class="heading word-reveal" data-word-delay="0.15" data-stagger="0.04" data-delay="0.3" data-duration="0.3" data-tilt="2" data-trigger="viewport" data-letters="wipe" data-animation="clip" data-effect="none">If we lose our power what leverage do we have left?</h2>
 
+  <p class="label">Test -3 · fades in, then letters shift apart</p>
+  <h2 class="heading shift-reveal" data-shift-delay="1.5" data-shift-duration="0.8" data-delay="0.3" data-duration="0.6" data-effect="random-spacing">UNO SPAZIO CHE SI TRASFORMA PER OGNI DISCIPLINA SPORTIVA</h2>
+
   <details class="panel" open data-lenis-prevent>
     <summary>Settings</summary>
     <form class="controls letter-controls">
@@ -87,6 +90,26 @@
           <option value="random-layout">Random spacing + line height</option>
           <option value="hover-gap">Hover to space letters</option>
           <option value="hover-spread">Hover to space all letters</option>
+        </select><span></span>
+      </label>
+      <div class="buttons">
+        <button type="reset">Reset</button>
+        <button type="button" class="shuffle">Shuffle</button>
+        <button type="button" class="replay">Replay</button>
+      </div>
+    </form>
+
+    <form class="controls shift-controls">
+      <h3>Test #3 · shift after entering</h3>
+      <label class="text"><span>Text</span><textarea name="text" rows="6">UNO SPAZIO CHE SI TRASFORMA PER OGNI DISCIPLINA SPORTIVA</textarea></label>
+      <label><span>Shift after (s)</span><input type="range" name="shiftDelay" min="0" max="5" step="0.1" value="1.5"><output>1.5</output><small class="hint">Counted from when the fade ends.</small></label>
+      <label><span>Time to shift (s)</span><input type="range" name="shiftDuration" min="0" max="3" step="0.1" value="0.8"><output>0.8</output></label>
+      <label><span>Start delay (s)</span><input type="range" name="delay" min="0" max="2" step="0.1" value="0.3"><output>0.3</output></label>
+      <label><span>Time to appear (s)</span><input type="range" name="duration" min="0" max="2" step="0.05" value="0.6"><output>0.6</output></label>
+      <label><span>Shift into</span>
+        <select name="effect">
+          <option value="random-spacing">Random letter spacing</option>
+          <option value="random-layout">Random spacing + line height</option>
         </select><span></span>
       </label>
       <div class="buttons">

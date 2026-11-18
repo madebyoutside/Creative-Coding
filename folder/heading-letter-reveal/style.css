@@ -34,7 +34,40 @@ body {
 
 .word-reveal {
   max-width: 10em;
+}
+
+.shift-reveal {
   margin-bottom: 60vh; /* room to scroll it fully into view */
+}
+
+/* Test 3: the gaps open over --shift-duration once shift-reveal.js removes .is-tight */
+.shift-reveal .char {
+  transition: padding-right var(--shift-duration) cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.shift-reveal .word {
+  transition-property: margin-right, margin-left, margin-top;
+  transition-duration: var(--shift-duration);
+  transition-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* plain spacing while it enters. Not on the measuring clone, so the lines still break with the gaps open */
+.shift-reveal.is-tight:not(.text-measure) .char.gap {
+  padding-right: 0;
+}
+
+.shift-reveal.is-tight:not(.text-measure) .word:not(:last-child) {
+  margin-right: 0.2em;
+}
+
+.shift-reveal.is-tight:not(.text-measure) .new-line {
+  margin-left: 0;
+  margin-top: 0;
+}
+
+.shift-reveal.no-transition .word,
+.shift-reveal.no-transition .char {
+  transition: none;
 }
 
 .label {
@@ -42,9 +75,10 @@ body {
   font-size: 14px;
 }
 
-/* Hidden until letter-reveal.js / word-reveal.js split them and start the animation */
+/* Hidden until letter-reveal.js / word-reveal.js / shift-reveal.js split them and start the animation */
 .letter-reveal,
-.word-reveal {
+.word-reveal,
+.shift-reveal {
   visibility: hidden;
 }
 
